@@ -1,6 +1,6 @@
 from django.db import models
 
-from recipe.models import Recipe
+from recipes.models import Recipe
 from users.models import User
 
 

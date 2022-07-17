@@ -12,6 +12,9 @@ class Tag(models.Model):
     color = models.CharField(max_length=32, unique=True)
     slug = models.SlugField(unique=True)
 
+    def __str__(self):
+        return self.name
+
     class Meta:
         verbose_name = 'Тэг'
         verbose_name_plural = 'Тэги'
@@ -28,6 +31,9 @@ class Ingredient(models.Model):
                             verbose_name='Название ингредиента')
     measurement_unit = models.CharField(max_length=128,
                                         verbose_name='Единица измерения')
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         verbose_name = 'Игредиент'
@@ -66,6 +72,9 @@ class Recipe(models.Model):
     )
     cooking_time = models.FloatField()
 
+    def __str__(self):
+        return self.name
+
     class Meta:
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
@@ -81,11 +90,16 @@ class RecipesTags(models.Model):
     recipe_id = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
+        verbose_name='Рецепт',
     )
     tag_id = models.ForeignKey(
         to=Tag,
         on_delete=models.CASCADE,
+        verbose_name='Тэг',
     )
+
+    def __str__(self):
+        return f'{self.recipe_id}, {self.tag_id}'
 
     class Meta:
         verbose_name = 'Тэг на рецепте'
