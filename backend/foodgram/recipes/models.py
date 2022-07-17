@@ -80,11 +80,11 @@ class Recipe(models.Model):
 class RecipesTags(models.Model):
     recipe_id = models.ForeignKey(
         to=Recipe,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
     )
     tag_id = models.ForeignKey(
         to=Tag,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
     )
 
     class Meta:
@@ -101,11 +101,11 @@ class RecipesTags(models.Model):
 class IngredientsRecipes(models.Model):
     recipe_id = models.ForeignKey(
         to=Recipe,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
     )
     ingredients_id = models.ForeignKey(
         to=Ingredient,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
     )
     amount = models.FloatField()
 

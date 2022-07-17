@@ -11,4 +11,5 @@ class Subscription(models.Model):
     subscriber = models.ForeignKey(
         to=User,
         on_delete=models.CASCADE,
+        related_name='subscriber',
     )
