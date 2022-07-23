@@ -8,5 +8,4 @@ class UserAdmin(admin.ModelAdmin):
     list_filter = ('email', 'first_name')
 
 
-admin.site.unregister(User)
 admin.site.register(User, UserAdmin)

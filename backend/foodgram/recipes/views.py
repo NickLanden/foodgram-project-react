@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 
-from .models import Recipe, Tag
-from .serializers import RecipeSerializer, TagSerializer
-from .viewsets import ListRetrieveViewSet
+from .models import Favorite, Ingredient, Recipe, Tag
+from .serializers import FavoriteSerializer, IngredientSerializer, RecipeSerializer, TagSerializer
+from .viewsets import CreateDestroyViewSet, ListRetrieveViewSet
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -13,3 +13,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
 class TagViewSet(ListRetrieveViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+
+
+class FavoriteViewSet(CreateDestroyViewSet):
+    queryset = Favorite.objects.all()
+    serializer_class = FavoriteSerializer
+
+
+class IngredientViewSet(ListRetrieveViewSet):
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer

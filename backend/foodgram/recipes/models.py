@@ -70,7 +70,7 @@ class Recipe(models.Model):
         through='RecipesTags',
         verbose_name='Тэги',
     )
-    cooking_time = models.FloatField()
+    cooking_time = models.IntegerField()
 
     def __str__(self):
         return self.name
@@ -87,19 +87,19 @@ class Recipe(models.Model):
 
 
 class RecipesTags(models.Model):
-    recipe_id = models.ForeignKey(
+    recipe = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
         verbose_name='Рецепт',
     )
-    tag_id = models.ForeignKey(
+    tag = models.ForeignKey(
         to=Tag,
         on_delete=models.CASCADE,
         verbose_name='Тэг',
     )
 
     def __str__(self):
-        return f'{self.recipe_id}, {self.tag_id}'
+        return f'{self.recipe}, {self.tag}'
 
     class Meta:
         verbose_name = 'Тэг на рецепте'
@@ -113,15 +113,18 @@ class RecipesTags(models.Model):
 
 
 class IngredientsRecipes(models.Model):
-    recipe_id = models.ForeignKey(
+    recipe = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
     )
-    ingredients_id = models.ForeignKey(
+    ingredients = models.ForeignKey(
         to=Ingredient,
         on_delete=models.CASCADE,
     )
-    amount = models.FloatField()
+    amount = models.IntegerField()
+
+    def __str__(self):
+        return f'{self.recipe}, {self.ingredients}'
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
@@ -134,15 +137,20 @@ class IngredientsRecipes(models.Model):
         ]
 
 
-class Favorites(models.Model):
-    user_id = models.ForeignKey(
+class Favorite(models.Model):
+    user = models.ForeignKey(
         to=User,
         on_delete=models.CASCADE,
+        verbose_name='Пользователь',
     )
-    recipe_id = models.ForeignKey(
+    recipe = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
+        verbose_name='Рецепт',
     )
+
+    def __str__(self):
+        return f'{self.user}, {self.recipe}'
 
     class Meta:
         verbose_name = 'Избранный рецепт'

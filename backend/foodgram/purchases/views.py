@@ -1,3 +1,7 @@
-from django.shortcuts import render
+from .models import Purchase
+from .viewsets import CreateRetrieveDestroyViewSet
 
-# Create your views here.
+
+# class PurchasesViewSet(CreateRetrieveDestroyViewSet):
+#     queryset = Purchase.objects.all()
+#     serializer_class =

@@ -1,3 +1,9 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import Subscription
+
+
+# class SubscriptionAdmin(admin.ModelAdmin):
+#     pass
+
+admin.site.register(Subscription)
