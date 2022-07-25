@@ -17,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
     def get_is_subscribed(self, instance):
         subscriber = self.context.get('request').user
         subscription_instance = Subscription.objects.filter(
-            author=instance, subscriber=subscriber)
+            author=instance.id, subscriber=subscriber.id)
         if subscription_instance.exists():
             return True
         return False

@@ -1,5 +1,7 @@
 from django.db import models
 
+from colorfield.fields import ColorField
+
 from users.models import User
 
 
@@ -9,7 +11,7 @@ class Tag(models.Model):
         unique=True,
         verbose_name='Название тэга'
     )
-    color = models.CharField(max_length=32, unique=True)
+    color = ColorField(unique=True)
     slug = models.SlugField(unique=True)
 
     def __str__(self):
@@ -117,21 +119,21 @@ class IngredientsRecipes(models.Model):
         to=Recipe,
         on_delete=models.CASCADE,
     )
-    ingredients = models.ForeignKey(
+    ingredient = models.ForeignKey(
         to=Ingredient,
         on_delete=models.CASCADE,
     )
     amount = models.IntegerField()
 
     def __str__(self):
-        return f'{self.recipe}, {self.ingredients}'
+        return f'{self.recipe}, {self.ingredient}'
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецепте'
         constraints = [
             models.UniqueConstraint(
-                fields=('recipe_id', 'ingredients_id'),
+                fields=('recipe_id', 'ingredient_id'),
                 name='unique_ingredients_recipes',
             )
         ]
@@ -159,5 +161,31 @@ class Favorite(models.Model):
             models.UniqueConstraint(
                 fields=('user_id', 'recipe_id'),
                 name='unique_favorites',
+            )
+        ]
+
+
+class Purchase(models.Model):
+    user = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        verbose_name='Пользователь',
+    )
+    recipe = models.ForeignKey(
+        to=Recipe,
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт в корзине',
+    )
+
+    def __str__(self):
+        return f'{self.user.username}, {self.recipe}'
+
+    class Meta:
+        verbose_name = 'Список покупок'
+        verbose_name_plural = 'Списки покупок'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user_id', 'recipe_id'),
+                name='unique_tags',
             )
         ]

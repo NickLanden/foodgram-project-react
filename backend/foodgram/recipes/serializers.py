@@ -1,6 +1,8 @@
 from rest_framework import serializers
 
-from .models import Favorite, Ingredient, IngredientsRecipes, Recipe, Tag
+from .models import (Favorite, Ingredient, IngredientsRecipes,
+                     Purchase, Recipe, Tag)
+from users.serializers import UserSerializer
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -10,6 +12,13 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class IngredientSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Ingredient
+        fields = ('id', 'name', 'measurement_unit')
+
+
+class IngredientRecipeSerializer(serializers.ModelSerializer):
     amount = serializers.SerializerMethodField()
 
     class Meta:
@@ -22,7 +31,8 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
-    ingredients = IngredientSerializer(many=True)
+    author = UserSerializer()
+    ingredients = IngredientRecipeSerializer(many=True)
     is_favorited = serializers.SerializerMethodField()
 
     # is_in_shopping_cart =
@@ -34,7 +44,7 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'cooking_time')
 
     def get_is_favorited(self, instance):
-        if Favorite.objects.filter(recipe=instance).exists():
+        if Favorite.objects.filter(recipe=instance.id).exists():
             return True
         return False
 
@@ -42,3 +52,14 @@ class RecipeSerializer(serializers.ModelSerializer):
 class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Favorite
+
+
+class PurchaseSerializer(serializers.ModelSerializer):
+    # cooking_time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+    # def get_cooking_time(self, recipe):
+    #     return Recipe.objects.get(pk=recipe.id).cooking_time
