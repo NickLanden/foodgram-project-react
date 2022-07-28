@@ -4,9 +4,12 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import User
-from .permissions import CurrentUserOrAdmin
-from .serializers import UserSerializer, UserCreateSerializer
+from .models import Subscription, User
+from .serializers import (
+    # SubscriptionSerializer,
+    UserSerializer,
+    UserCreateSerializer
+)
 
 
 class UserViewSet(mixins.RetrieveModelMixin,
@@ -21,6 +24,8 @@ class UserViewSet(mixins.RetrieveModelMixin,
             return UserCreateSerializer
         elif self.action == 'set_password':
             return SetPasswordSerializer
+        # elif self.action == 'subscription':
+        #     return SubscriptionSerializer
         else:
             return UserSerializer
 
@@ -28,22 +33,31 @@ class UserViewSet(mixins.RetrieveModelMixin,
         print(self.action)
         if self.action in ('list', 'create', 'retrieve'):
             self.permission_classes = [AllowAny]
-        elif self.action == 'me':
+        elif self.action in ('me', 'subscriptions'):
             self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
 
     @action(methods=['get'], detail=False,
             url_path='me', url_name='me')
     def me(self, request):
-        user = self.request.user
-        serializer = UserSerializer(user, context={'request': request})
+        user = request.user
+        serializer = self.get_serializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(methods=['post'], detail=False)
     def set_password(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         self.request.user.set_password(serializer.data.get('new_password'))
         self.request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # @action(methods=['get'], detail=False)
+    # def subscriptions(self, request):
+    #     user = request.user
+    #     subs = Subscription.objects.filter(subscriber=user)
+    #     authors = [x.author for x in subs]
+    #     print(authors)
+    #     serializer = self.get_serializer(authors, many=True)
+    #     print(serializer.data)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)

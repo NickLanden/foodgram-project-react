@@ -44,3 +44,19 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+class Subscription(models.Model):
+    author = models.ForeignKey(User,
+                               on_delete=models.DO_NOTHING,
+                               related_name='authors')
+    subscriber = models.ForeignKey(User,
+                                   on_delete=models.DO_NOTHING,
+                                   related_name='subscribers')
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+
+    def __str__(self):
+        return f'{self.author} - {self.subscriber}'

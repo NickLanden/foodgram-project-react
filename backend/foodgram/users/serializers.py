@@ -1,9 +1,7 @@
-from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from subscriptions.models import Subscription
-from .models import User
+from .models import Subscription, User
 
 
 class UserSerializer(serializers.ModelSerializer):
