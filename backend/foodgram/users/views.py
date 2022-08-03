@@ -1,4 +1,8 @@
-from djoser.serializers import SetPasswordSerializer
+from djoser.serializers import (SetPasswordSerializer,
+                                TokenCreateSerializer,
+                                TokenSerializer)
+from djoser import utils
+from djoser.views import TokenCreateView
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -31,9 +35,9 @@ class UserViewSet(mixins.RetrieveModelMixin,
 
     def get_permissions(self):
         print(self.action)
-        if self.action in ('list', 'create', 'retrieve'):
+        if self.action in ('list', 'create'):
             self.permission_classes = [AllowAny]
-        elif self.action in ('me', 'subscriptions'):
+        elif self.action in ('retrieve', 'me', 'subscriptions'):
             self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
 
@@ -61,3 +65,16 @@ class UserViewSet(mixins.RetrieveModelMixin,
     #     serializer = self.get_serializer(authors, many=True)
     #     print(serializer.data)
     #     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class TokenCreateView(TokenCreateView):
+    serializer_class = TokenCreateSerializer
+    permission_classes = (AllowAny,)
+
+    def _action(self, serializer):
+        token = utils.login_user(self.request, serializer.user)
+        token_serializer_class = TokenSerializer
+        return Response(
+            data=token_serializer_class(token).data,
+            status=status.HTTP_201_CREATED
+        )

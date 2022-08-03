@@ -16,12 +16,12 @@ class User(AbstractUser):
                               unique=True,
                               verbose_name='Адрес электронной почты')
     first_name = models.CharField(max_length=150,
-                                  null=True,
-                                  blank=True,
+                                  null=False,
+                                  blank=False,
                                   verbose_name='Имя')
     last_name = models.CharField(max_length=150,
-                                 null=True,
-                                 blank=True,
+                                 null=False,
+                                 blank=False,
                                  verbose_name='Фамилия')
     role = models.TextField(choices=ROLE_CHOICES,
                             default=USER,
@@ -57,6 +57,12 @@ class Subscription(models.Model):
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('author', 'subscriber'),
+                name='unique_subscription'
+            )
+        ]
 
     def __str__(self):
         return f'{self.author} - {self.subscriber}'

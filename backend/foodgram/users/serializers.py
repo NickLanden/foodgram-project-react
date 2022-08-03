@@ -13,7 +13,10 @@ class UserSerializer(serializers.ModelSerializer):
                   'last_name', 'is_subscribed')
 
     def get_is_subscribed(self, instance):
-        subscriber = self.context.get('request').user
+        try:
+            subscriber = self.context.get('request').user
+        except AttributeError:
+            return False
         subscription_instance = Subscription.objects.filter(
             author=instance.id, subscriber=subscriber.id)
         if subscription_instance.exists():
