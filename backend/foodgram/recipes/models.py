@@ -11,8 +11,8 @@ class Tag(models.Model):
         unique=True,
         verbose_name='Название тэга'
     )
-    color = ColorField(unique=True, verbose_name='Цвет')
-    slug = models.SlugField(unique=True)
+    color = ColorField(unique=True, verbose_name='Цвет', null=True)
+    slug = models.SlugField(unique=True, null=True, max_length=200)
 
     def __str__(self):
         return self.name

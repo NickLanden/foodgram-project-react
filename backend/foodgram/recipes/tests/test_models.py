@@ -30,7 +30,4 @@ class TagModelTest(TestCase):
 
     def test_object_name(self):
         tag = self.breakfast_tag
-        self.assertEqual(
-            str(tag),
-            tag.name
-        )
+        self.assertEqual(str(tag), tag.name)
