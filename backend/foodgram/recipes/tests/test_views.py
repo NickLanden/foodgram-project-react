@@ -26,6 +26,7 @@ class TagTest(APITestCase):
         self.client = APIClient()
 
     def test_list_tags(self):
+        """Проверяем способность API возвращать все тэги списком."""
         response = self.client.get(
             reverse('recipes:tags-list')
         )
@@ -35,6 +36,8 @@ class TagTest(APITestCase):
             len(response.data), 2)
 
     def test_retrieve_tag(self):
+        """Проверяем способность API возвращать один конкретный
+        тэг по первичному ключу."""
         response = self.client.get(
             reverse('recipes:tags-detail', kwargs={'pk': 1})
         )
@@ -42,6 +45,12 @@ class TagTest(APITestCase):
         serializer = TagSerializer(tag)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, serializer.data)
-        self.assertTrue(len(response.data.get('color')) <= 7)
-        self.assertTrue(len(response.data.get('slug')) <= 200)
 
+    def test_404_retrieve_tag(self):
+        """Проверяем способность API возвращать ошибку  404 на запрос
+        несуществующего тэга."""
+        response = self.client.get(
+            reverse('recipes:tags-detail', kwargs={'pk': 100})
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn('detail', response.data)

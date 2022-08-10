@@ -15,6 +15,7 @@ class TagModelTest(TestCase):
         )
 
     def test_verbose_name(self):
+        """Проверяем, что поля модели тэгов имеют читаемые названия."""
         tag = self.breakfast_tag
         verbose_fields = {
             'name': 'Название тэга',
@@ -29,5 +30,6 @@ class TagModelTest(TestCase):
                 )
 
     def test_object_name(self):
+        """Проверяем, что объект модели тэгов имеет читаемое название."""
         tag = self.breakfast_tag
         self.assertEqual(str(tag), tag.name)
