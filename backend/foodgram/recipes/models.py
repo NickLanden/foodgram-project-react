@@ -29,9 +29,9 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
-    name = models.CharField(max_length=128,
+    name = models.CharField(max_length=200,
                             verbose_name='Название ингредиента')
-    measurement_unit = models.CharField(max_length=128,
+    measurement_unit = models.CharField(max_length=200,
                                         verbose_name='Единица измерения')
 
     def __str__(self):
@@ -64,7 +64,7 @@ class Recipe(models.Model):
     text = models.TextField(verbose_name='Описание рецепта')
     ingredients = models.ManyToManyField(
         to=Ingredient,
-        through='IngredientsRecipes',
+        through='RecipesIngredients',
         verbose_name='Ингредиенты',
     )
     tags = models.ManyToManyField(
@@ -114,7 +114,7 @@ class RecipesTags(models.Model):
         ]
 
 
-class IngredientsRecipes(models.Model):
+class RecipesIngredients(models.Model):
     recipe = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
@@ -134,6 +134,6 @@ class IngredientsRecipes(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=('recipe_id', 'ingredient_id'),
-                name='unique_ingredients_recipes',
+                name='unique_recipes_ingredients',
             )
         ]

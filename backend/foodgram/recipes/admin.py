@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import (Ingredient, IngredientsRecipes,
+from .models import (Ingredient, RecipesIngredients,
                      Recipe, RecipesTags, Tag)
 
 
@@ -22,4 +22,4 @@ admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Tag)
 admin.site.register(RecipesTags, RecipesTagsAdmin)
-admin.site.register(IngredientsRecipes)
+admin.site.register(RecipesIngredients)
