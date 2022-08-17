@@ -3,11 +3,12 @@ from django.db import models
 from colorfield.fields import ColorField
 
 from users.models import User
+from .validators import validate_integer_greater_zero
 
 
 class Tag(models.Model):
     name = models.CharField(
-        max_length=128,
+        max_length=200,
         unique=True,
         verbose_name='Название тэга'
     )
@@ -54,7 +55,7 @@ class Recipe(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Автор рецепта',
     )
-    name = models.CharField(max_length=128,
+    name = models.CharField(max_length=200,
                             verbose_name='Название рецепта')
     image = models.ImageField(
         verbose_name='Картинка',
@@ -64,15 +65,17 @@ class Recipe(models.Model):
     text = models.TextField(verbose_name='Описание рецепта')
     ingredients = models.ManyToManyField(
         to=Ingredient,
-        through='RecipesIngredients',
+        through='IngredientInRecipe',
         verbose_name='Ингредиенты',
     )
     tags = models.ManyToManyField(
         to=Tag,
-        through='RecipesTags',
+        through='TagInRecipe',
         verbose_name='Тэги',
     )
-    cooking_time = models.IntegerField()
+    cooking_time = models.IntegerField(
+        validators=[validate_integer_greater_zero]
+    )
 
     def __str__(self):
         return self.name
@@ -88,7 +91,7 @@ class Recipe(models.Model):
         ]
 
 
-class RecipesTags(models.Model):
+class TagInRecipe(models.Model):
     recipe = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
@@ -114,16 +117,20 @@ class RecipesTags(models.Model):
         ]
 
 
-class RecipesIngredients(models.Model):
+class IngredientInRecipe(models.Model):
     recipe = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
+        related_name='ingredients_in'
     )
     ingredient = models.ForeignKey(
         to=Ingredient,
         on_delete=models.CASCADE,
+        related_name='in_recipes'
     )
-    amount = models.IntegerField()
+    amount = models.IntegerField(
+        validators=[validate_integer_greater_zero]
+    )
 
     def __str__(self):
         return f'{self.recipe}, {self.ingredient}'

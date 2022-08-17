@@ -2,8 +2,9 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from ..models import Ingredient, Tag
+from ..models import Ingredient, IngredientInRecipe, Recipe, Tag, TagInRecipe
 from ..serializers import IngredientSerializer, TagSerializer
+from users.models import User
 
 
 class TagTest(APITestCase):
@@ -112,3 +113,123 @@ class IngredientTest(APITestCase):
             )
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(len(response.data), amount)
+
+
+class RecipeTest(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.russian_president = User.objects.create_user(
+            username='v.putin',
+            email='vlad.putin@mail.ru',
+            first_name='Vladimir',
+            last_name='Putin',
+            password='RUSSIAN_FEDERATION'
+        )
+        cls.american_president = User.objects.create_user(
+            username='j.biden',
+            email='j.biden@gmail.ru',
+            first_name='Joe',
+            last_name='Biden',
+            password='AMERICA'
+        )
+
+        cls.client = APIClient()
+
+        cls.authenticated_client = APIClient()
+        cls.authenticated_client.force_authenticate(cls.russian_president)
+
+        cls.authenticated_client2 = APIClient()
+        cls.authenticated_client2.force_authenticate(cls.american_president)
+
+        cls.dumplings = Ingredient.objects.create(
+            name='Пельмени',
+            measurement_unit='г'
+        )
+        cls.egg = Ingredient.objects.create(
+            name='Яйцо',
+            measurement_unit='шт'
+        )
+        cls.sausage = Ingredient.objects.create(
+            name='Сосиска',
+            measurement_unit='шт'
+        )
+
+        cls.breakfast_tag = Tag.objects.create(
+            name='Завтрак',
+            color='#ebff38',
+            slug='breakfast'
+        )
+
+        cls.recipe1 = Recipe.objects.create(
+            author=cls.russian_president,
+            name='Варенные пельмени',
+            image='recipes/63fb3d69-37e1-4832-965d-fb282d1e8ba4.jpeg',
+            text='Опускаем пельмени в кипящую подсоленную воду. Варим до готовности. Добавляем сметану по желанию.',
+            cooking_time=0
+        )
+
+        # IngredientInRecipe.objects.create(
+        #     recipe=cls.recipe1,
+        #     ingredient=cls.dumplings,
+        #     amount=300
+        # )
+        cls.recipe1.ingredients.add(
+            cls.dumplings,
+            through_defaults={'amount': 300}
+        )
+
+        cls.recipe1.tags.add(cls.breakfast_tag)
+
+        cls.recipe2 = Recipe.objects.create(
+            author=cls.american_president,
+            name='Яичница с сосисками',
+            image='recipe/yaichnica-s-sosiskami-770x513.jpeg',
+            text='Нарезать сосиски, обжарить на среднем огне, залит яйцами.',
+            cooking_time=10
+        )
+        # IngredientInRecipe.objects.create(
+        #     recipe=cls.recipe2,
+        #     ingredient=cls.egg,
+        #     amount=3
+        # )
+        # IngredientInRecipe.objects.create(
+        #     recipe=cls.recipe2,
+        #     ingredient=cls.sausage,
+        #     amount=2
+        # )
+
+        # cls.recipe2.ingredients.add(
+        #     cls.egg,
+        #     through_defaults={'amount': 3}
+        # )
+        # cls.recipe2.ingredients.add(
+        #     cls.sausage,
+        #     through_defaults={'amount': 2}
+        # )
+
+    def test_list_recipes(self):
+        response = self.client.get(reverse('recipes:recipes-list'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2)
+
+    def test_list_filter_author_recipes(self):
+        urls = {
+            'http://127.0.0.1:8000/api/recipes/?author=1': 1,
+            'http://127.0.0.1:8000/api/recipes/?author=2': 1,
+        }
+        for url, cnt in urls.items():
+            response = self.client.get(
+                url,
+                follow=True
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data['count'], cnt)
+
+    def test_retrieve_recipes(self):
+        response = self.client.get(
+            reverse('recipes:recipes-detail', kwargs={'pk': 1})
+        )
+        print(response.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

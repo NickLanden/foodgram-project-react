@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from .models import (Ingredient, RecipesIngredients,
-                     Recipe, RecipesTags, Tag)
+from .models import (Ingredient, IngredientInRecipe,
+                     Recipe, TagInRecipe, Tag)
 
 
 class RecipeAdmin(admin.ModelAdmin):
@@ -14,12 +14,12 @@ class IngredientAdmin(admin.ModelAdmin):
     list_filter = ('name',)
 
 
-class RecipesTagsAdmin(admin.ModelAdmin):
+class TagInRecipeAdmin(admin.ModelAdmin):
     pass
 
 
 admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Tag)
-admin.site.register(RecipesTags, RecipesTagsAdmin)
-admin.site.register(RecipesIngredients)
+admin.site.register(TagInRecipe, TagInRecipeAdmin)
+admin.site.register(IngredientInRecipe)

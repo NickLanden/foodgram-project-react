@@ -4,8 +4,8 @@ from rest_framework.filters import SearchFilter
 from rest_framework.permissions import AllowAny
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from .models import Ingredient, Tag
-from .serializers import IngredientSerializer, TagSerializer
+from .models import Ingredient, Recipe, Tag
+from .serializers import IngredientSerializer, RecipeSerializer, TagSerializer
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -30,3 +30,12 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     lookup_field = 'id'
     filter_backends = (CustomSearchFilter,)
     search_fields = ('^name',)
+
+
+class RecipeViewSet(ModelViewSet):
+    """ViewSet для обработки запросов, связанных с рецептами."""
+    queryset = Recipe.objects.all()
+    serializer_class = RecipeSerializer
+    permission_classes = (AllowAny,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('author',)
