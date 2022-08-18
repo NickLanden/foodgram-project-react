@@ -96,11 +96,13 @@ class TagInRecipe(models.Model):
         to=Recipe,
         on_delete=models.CASCADE,
         verbose_name='Рецепт',
+        related_name='tags_in'
     )
     tag = models.ForeignKey(
         to=Tag,
         on_delete=models.CASCADE,
         verbose_name='Тэг',
+        related_name='in_recipe'
     )
 
     def __str__(self):
@@ -126,7 +128,7 @@ class IngredientInRecipe(models.Model):
     ingredient = models.ForeignKey(
         to=Ingredient,
         on_delete=models.CASCADE,
-        related_name='in_recipes'
+        related_name='in_recipe'
     )
     amount = models.IntegerField(
         validators=[validate_integer_greater_zero]

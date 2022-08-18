@@ -5,6 +5,7 @@ from rest_framework.test import APIClient, APITestCase
 from ..models import Ingredient, IngredientInRecipe, Recipe, Tag, TagInRecipe
 from ..serializers import IngredientSerializer, TagSerializer
 from users.models import User
+from users.serializers import UserSerializer
 
 
 class TagTest(APITestCase):
@@ -120,6 +121,8 @@ class RecipeTest(APITestCase):
     def setUpClass(cls):
         super().setUpClass()
 
+        cls.retrieve_id_user = 1
+
         cls.russian_president = User.objects.create_user(
             username='v.putin',
             email='vlad.putin@mail.ru',
@@ -161,26 +164,27 @@ class RecipeTest(APITestCase):
             color='#ebff38',
             slug='breakfast'
         )
+        cls.new_tag = Tag.objects.create(
+            name='Новинка',
+            color='#e3160b',
+            slug='new'
+        )
 
         cls.recipe1 = Recipe.objects.create(
             author=cls.russian_president,
             name='Варенные пельмени',
             image='recipes/63fb3d69-37e1-4832-965d-fb282d1e8ba4.jpeg',
             text='Опускаем пельмени в кипящую подсоленную воду. Варим до готовности. Добавляем сметану по желанию.',
-            cooking_time=0
+            cooking_time=12
         )
 
-        # IngredientInRecipe.objects.create(
-        #     recipe=cls.recipe1,
-        #     ingredient=cls.dumplings,
-        #     amount=300
-        # )
         cls.recipe1.ingredients.add(
             cls.dumplings,
             through_defaults={'amount': 300}
         )
 
         cls.recipe1.tags.add(cls.breakfast_tag)
+        cls.recipe1.tags.add(cls.new_tag)
 
         cls.recipe2 = Recipe.objects.create(
             author=cls.american_president,
@@ -189,25 +193,15 @@ class RecipeTest(APITestCase):
             text='Нарезать сосиски, обжарить на среднем огне, залит яйцами.',
             cooking_time=10
         )
-        # IngredientInRecipe.objects.create(
-        #     recipe=cls.recipe2,
-        #     ingredient=cls.egg,
-        #     amount=3
-        # )
-        # IngredientInRecipe.objects.create(
-        #     recipe=cls.recipe2,
-        #     ingredient=cls.sausage,
-        #     amount=2
-        # )
 
-        # cls.recipe2.ingredients.add(
-        #     cls.egg,
-        #     through_defaults={'amount': 3}
-        # )
-        # cls.recipe2.ingredients.add(
-        #     cls.sausage,
-        #     through_defaults={'amount': 2}
-        # )
+        cls.recipe2.ingredients.add(
+            cls.egg,
+            through_defaults={'amount': 3}
+        )
+        cls.recipe2.ingredients.add(
+            cls.sausage,
+            through_defaults={'amount': 2}
+        )
 
     def test_list_recipes(self):
         response = self.client.get(reverse('recipes:recipes-list'))
@@ -227,9 +221,39 @@ class RecipeTest(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data['count'], cnt)
 
-    def test_retrieve_recipes(self):
+    def test_retrieve_status_code_recipes(self):
         response = self.client.get(
-            reverse('recipes:recipes-detail', kwargs={'pk': 1})
+            reverse('recipes:recipes-detail',
+                    kwargs={'pk': self.retrieve_id_user})
         )
-        print(response.data)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_user_in_recipes(self):
+        """Проверяем возможность API отдавать корректную
+        информацию по автору рецепта."""
+        response = self.client.get(
+            reverse('recipes:recipes-detail',
+                    kwargs={'pk': 1})
+        )
+
+        user = User.objects.get(pk=self.russian_president.id)
+        user_serializer = UserSerializer(user)
+        self.assertEqual(user_serializer.data, response.data['author'])
+
+    def test_retrieve_tags_in_recipes(self):
+        """Проверяем возможность API отдавать корректные
+        теги при запросе конкретного рецепта."""
+        response = self.client.get(
+            reverse('recipes:recipes-detail',
+                    kwargs={'pk': 1})
+        )
+        tags = self.recipe1.tags_in.all()
+        self.assertEqual(len(response.data['tags']), len(tags))
+
+        for i in range(len(tags)):
+            with self.subTest(tag=tags[i]):
+                t = Tag.objects.get(pk=tags[i].tag_id)
+                tag_serializer = TagSerializer(t)
+                self.assertEqual(response.data['tags'][i], tag_serializer.data)
+
