@@ -1,9 +1,14 @@
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
+import json
 
-from ..models import Ingredient, IngredientInRecipe, Recipe, Tag, TagInRecipe
-from ..serializers import IngredientSerializer, TagSerializer
+from ..models import (Favorite, Ingredient, IngredientInRecipe,
+                      Recipe, Tag, TagInRecipe)
+from ..serializers import (IngredientSerializer,
+                           IngredientInRecipeSerializer,
+                           CreateIngredientsInRecipeSerializer,
+                           TagSerializer)
 from users.models import User
 from users.serializers import UserSerializer
 
@@ -45,6 +50,7 @@ class TagTest(APITestCase):
         )
         tag = Tag.objects.get(pk=1)
         serializer = TagSerializer(tag)
+        print(serializer)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, serializer.data)
 
@@ -120,8 +126,6 @@ class RecipeTest(APITestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-
-        cls.retrieve_id_user = 1
 
         cls.russian_president = User.objects.create_user(
             username='v.putin',
@@ -224,7 +228,7 @@ class RecipeTest(APITestCase):
     def test_retrieve_status_code_recipes(self):
         response = self.client.get(
             reverse('recipes:recipes-detail',
-                    kwargs={'pk': self.retrieve_id_user})
+                    kwargs={'id': 1})
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -234,7 +238,7 @@ class RecipeTest(APITestCase):
         информацию по автору рецепта."""
         response = self.client.get(
             reverse('recipes:recipes-detail',
-                    kwargs={'pk': 1})
+                    kwargs={'id': 1})
         )
 
         user = User.objects.get(pk=self.russian_president.id)
@@ -246,7 +250,7 @@ class RecipeTest(APITestCase):
         теги при запросе конкретного рецепта."""
         response = self.client.get(
             reverse('recipes:recipes-detail',
-                    kwargs={'pk': 1})
+                    kwargs={'id': 1})
         )
         tags = self.recipe1.tags_in.all()
         self.assertEqual(len(response.data['tags']), len(tags))
@@ -255,5 +259,158 @@ class RecipeTest(APITestCase):
             with self.subTest(tag=tags[i]):
                 t = Tag.objects.get(pk=tags[i].tag_id)
                 tag_serializer = TagSerializer(t)
-                self.assertEqual(response.data['tags'][i], tag_serializer.data)
+                self.assertEqual(response.data['tags'][i],
+                                 tag_serializer.data)
 
+    def test_retrieve_ingredients_in_recipes(self):
+        """Проверяем возможность API отдавать корректные
+        ингредиенты при запросе конкретного рецепта."""
+        response = self.client.get(
+            reverse('recipes:recipes-detail',
+                    kwargs={'id': 1})
+        )
+        ingredients = self.recipe1.ingredients_in.all()
+        self.assertEqual(len(response.data['ingredients']),
+                         len(ingredients))
+        for i in range(len(ingredients)):
+            with self.subTest(ingredient=ingredients[i]):
+                ing_serializer = IngredientInRecipeSerializer(ingredients[i])
+                self.assertEqual(response.data['ingredients'][i],
+                                 ing_serializer.data)
+
+
+class CreateRecipeTest(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.matroskin = User.objects.create_user(
+            username='c.matroskin',
+            email='cat.matroskin@mail.ru',
+            first_name='Cat',
+            last_name='Matroskin',
+            password='milk'
+        )
+
+        cls.client = APIClient()
+
+        cls.authenticated_client = APIClient()
+        cls.authenticated_client.force_authenticate(cls.matroskin)
+
+        cls.doshirak = Ingredient.objects.create(
+            name='Доширак',
+            measurement_unit='шт'
+        )
+        cls.sour = Ingredient.objects.create(
+            name='Сметана',
+            measurement_unit='г'
+        )
+
+        cls.breakfast_tag = Tag.objects.create(
+            name='Завтрак',
+            color='#ebff38',
+            slug='breakfast'
+        )
+        cls.new_tag = Tag.objects.create(
+            name='Новинка',
+            color='#e3160b',
+            slug='new'
+        )
+
+        # "ingredients": [
+        #     {"id": 1, "amount": 1},
+        #     {"id": 2, "amount": 100}
+        # ],
+
+        cls.doshirak_payload = {
+            "tags": [1, 2],
+            "name": "Доширак",
+            "text": "Заливаем кипятком и ждем 7 минут. Приятного аппетита!",
+            "cooking_time": 7
+        }
+
+    # def test_create_recipe(self):
+    #     """Проверяем возможность API создавать объекты."""
+    #     response = self.authenticated_client.post(
+    #         reverse('recipes:recipes-list'),
+    #         data=json.dumps(self.doshirak_payload),
+    #         content_type='application/json'
+    #     )
+        # sausage = IngredientInRecipe.objects.get(pk=1)
+        # serializer = CreateIngredientsInRecipeSerializer(sausage)
+        # print(response.data)
+        # print(serializer.data)
+        # self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+
+class FavoriteRecipeTest(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.test_user = User.objects.create_user(
+            username='test_user',
+            email='test_user@gmail.ru',
+            first_name='TestUserName',
+            last_name='TestUserLastName',
+            password='test_password'
+        )
+
+        cls.client = APIClient()
+
+        cls.authenticated_client = APIClient()
+        cls.authenticated_client.force_authenticate(cls.test_user)
+
+        cls.test_recipe = Recipe.objects.create(
+            author=cls.test_user,
+            name='test recipe',
+            image='recipes/63fb3d69-37e1-4832-965d-fb282d1e8ba4.jpeg',
+            text='test text',
+            cooking_time=5
+        )
+        cls.test_recipe2 = Recipe.objects.create(
+            author=cls.test_user,
+            name='test recipe2',
+            image='recipes/63fb3d69-37e1-4832-965d-fb282d1e8ba4.jpeg',
+            text='test text2',
+            cooking_time=5
+        )
+
+        cls.test_favorite = Favorite.objects.create(
+            user=cls.test_user,
+            recipe=cls.test_recipe2
+        )
+
+    def test_create_favorite(self):
+        """Проверяем возможность API добавлять рецепты в избранное."""
+        response = self.authenticated_client.post(
+            reverse('recipes:favorite-list', kwargs={'id': 1})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        favorite = Favorite.objects.filter(
+            user=self.test_user, recipe=self.test_recipe)
+        self.assertEqual(len(favorite), 1)
+
+        # for field in ['id', 'name', 'image', 'cooking_time']:
+        #     with self.subTest(field=field):
+        #         self.assertIn(field, response.data.keys())
+
+    def test_create_duplicate_favorite(self):
+        response = self.authenticated_client.post(
+            reverse('recipes:favorite-list', kwargs={'id': 2})
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_unauthorized_favorite(self):
+        response = self.client.post(
+            reverse('recipes:favorite-list', kwargs={'id': 1})
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_favorite(self):
+        response = self.authenticated_client.delete(
+            reverse('recipes:favorite-list', kwargs={'id': 1})
+        )
+        print(response)

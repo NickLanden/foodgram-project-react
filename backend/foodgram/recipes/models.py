@@ -146,3 +146,40 @@ class IngredientInRecipe(models.Model):
                 name='unique_recipes_ingredients',
             )
         ]
+
+
+class Subscription(models.Model):
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='author'
+    )
+    subscriber = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='subscriber'
+    )
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('author_id', 'subscriber_id'),
+                name='unique_subscriptions',
+            )
+        ]
+
+
+class Favorite(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='favorites'
+    )
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='in_favorites'
+    )
+
+    class Meta:
+        verbose_name = 'Избранное'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user_id', 'recipe_id'),
+                name='unique_favorites',
+            )
+        ]

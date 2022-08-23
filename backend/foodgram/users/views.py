@@ -34,7 +34,6 @@ class UserViewSet(mixins.RetrieveModelMixin,
             return UserSerializer
 
     def get_permissions(self):
-        print(self.action)
         if self.action in ('list', 'create'):
             self.permission_classes = [AllowAny]
         elif self.action in ('retrieve', 'me', 'subscriptions'):
