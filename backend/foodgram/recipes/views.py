@@ -64,6 +64,12 @@ class RecipeViewSet(ModelViewSet):
         elif self.action == 'create':
             return CreateRecipeSerializer
 
+    def perform_destroy(self, instance):
+        if instance.author == self.request.user:
+            instance.delete()
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
 
 class FavoriteViewSet(CreateDestroyViewSet):
     queryset = Favorite.objects.all()

@@ -291,11 +291,21 @@ class CreateRecipeTest(APITestCase):
             last_name='Matroskin',
             password='milk'
         )
+        cls.pechkin = User.objects.create_user(
+            username='postman.pechkin',
+            email='postman.pechkin@yandex.ru',
+            first_name='postman',
+            last_name='pechkin',
+            password='bicycle'
+        )
 
         cls.client = APIClient()
 
         cls.authenticated_client = APIClient()
         cls.authenticated_client.force_authenticate(cls.matroskin)
+
+        cls.authenticated_client2 = APIClient()
+        cls.authenticated_client2.force_authenticate(cls.pechkin)
 
         cls.doshirak = Ingredient.objects.create(
             name='Доширак',
@@ -323,24 +333,64 @@ class CreateRecipeTest(APITestCase):
         # ],
 
         cls.doshirak_payload = {
-            "tags": [1, 2],
+            "tags": [
+                1,
+                2
+            ],
+            "ingredients": [
+                {"id": 1, "amount": 1},
+                {"id": 2, "amount": 100}
+            ],
             "name": "Доширак",
             "text": "Заливаем кипятком и ждем 7 минут. Приятного аппетита!",
             "cooking_time": 7
         }
 
-    # def test_create_recipe(self):
-    #     """Проверяем возможность API создавать объекты."""
-    #     response = self.authenticated_client.post(
-    #         reverse('recipes:recipes-list'),
-    #         data=json.dumps(self.doshirak_payload),
-    #         content_type='application/json'
-    #     )
+        cls.recipe2 = Recipe.objects.create(
+            author=cls.matroskin,
+            name='Яичница с сосисками',
+            image='recipe/yaichnica-s-sosiskami-770x513.jpeg',
+            text='Нарезать сосиски, обжарить на среднем огне, залит яйцами.',
+            cooking_time=10
+        )
+
+    def test_create_recipe(self):
+        """Проверяем возможность API создавать объекты."""
+        response = self.authenticated_client.post(
+            reverse('recipes:recipes-list'),
+            data=json.dumps(self.doshirak_payload),
+            content_type='application/json'
+        )
         # sausage = IngredientInRecipe.objects.get(pk=1)
         # serializer = CreateIngredientsInRecipeSerializer(sausage)
-        # print(response.data)
+        print(response.data)
         # print(serializer.data)
         # self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_delete_recipe(self):
+        """Проверяем возможность API удалять рецепт"""
+        response = self.authenticated_client.delete(
+            reverse('recipes:recipes-detail', kwargs={'id': 1}),
+        )
+        deleted_recipe = Recipe.objects.all()
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(deleted_recipe), 0)
+
+    def test_delete_unauthorized_recipe(self):
+        """Проверяем возможность API отказывать в доступе неавторизованным
+        пользователям при запросе на удаление рецепта."""
+        response = self.client.delete(
+            reverse('recipes:recipes-detail', kwargs={'id': 1}),
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_not_author_recipe(self):
+        """Проверяем возможность API запрещать удаление рецепта
+        другого пользователя."""
+        response = self.authenticated_client2.delete(
+            reverse('recipes:recipes-detail', kwargs={'id': 1}),
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class FavoriteRecipeTest(APITestCase):
@@ -393,24 +443,30 @@ class FavoriteRecipeTest(APITestCase):
             user=self.test_user, recipe=self.test_recipe)
         self.assertEqual(len(favorite), 1)
 
-        # for field in ['id', 'name', 'image', 'cooking_time']:
-        #     with self.subTest(field=field):
-        #         self.assertIn(field, response.data.keys())
+        for field in ['id', 'name', 'image', 'cooking_time']:
+            with self.subTest(field=field):
+                self.assertIn(field, response.data.keys())
 
     def test_create_duplicate_favorite(self):
+        """Проверяем возможность API несколько раз добавлять
+        один и тот же рецепт в избранное."""
         response = self.authenticated_client.post(
             reverse('recipes:favorite-list', kwargs={'id': 2})
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_unauthorized_favorite(self):
+        """Проверяем возможность API отказа в доступе при добавлении
+        рецепта в избранное неавторизованным пользователем."""
         response = self.client.post(
             reverse('recipes:favorite-list', kwargs={'id': 1})
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_delete_favorite(self):
+        """Проверяем возможность API удалять рецепт из избранного."""
         response = self.authenticated_client.delete(
-            reverse('recipes:favorite-list', kwargs={'id': 1})
+            reverse('recipes:favorite', kwargs={'id': 1})
         )
         print(response)
+        self.assertEqual(response.data, status.HTTP_204_NO_CONTENT)
