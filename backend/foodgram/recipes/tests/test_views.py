@@ -361,11 +361,17 @@ class CreateRecipeTest(APITestCase):
             data=json.dumps(self.doshirak_payload),
             content_type='application/json'
         )
-        # sausage = IngredientInRecipe.objects.get(pk=1)
-        # serializer = CreateIngredientsInRecipeSerializer(sausage)
-        print(response.data)
-        # print(serializer.data)
-        # self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # print(response.data)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(Recipe.objects.all()), 2)
+
+        for field in ['id', 'tags', 'author', 'ingredients',
+                      'is_favorited', 'is_in_shopping_cart',
+                      'name', 'image', 'text', 'cooking_time']:
+            with self.subTest(field=field):
+                self.assertIn(field, response.data.keys())
 
     def test_delete_recipe(self):
         """Проверяем возможность API удалять рецепт"""
@@ -405,11 +411,21 @@ class FavoriteRecipeTest(APITestCase):
             last_name='TestUserLastName',
             password='test_password'
         )
+        cls.test_user2 = User.objects.create_user(
+            username='test_user2',
+            email='test_user2@gmail.ru',
+            first_name='TestUser2Name',
+            last_name='TestUser2LastName',
+            password='test_password2'
+        )
 
         cls.client = APIClient()
 
         cls.authenticated_client = APIClient()
         cls.authenticated_client.force_authenticate(cls.test_user)
+
+        cls.authenticated_client2 = APIClient()
+        cls.authenticated_client2.force_authenticate(cls.test_user2)
 
         cls.test_recipe = Recipe.objects.create(
             author=cls.test_user,
@@ -434,9 +450,8 @@ class FavoriteRecipeTest(APITestCase):
     def test_create_favorite(self):
         """Проверяем возможность API добавлять рецепты в избранное."""
         response = self.authenticated_client.post(
-            reverse('recipes:favorite-list', kwargs={'id': 1})
+            reverse('recipes:recipes-favorite', kwargs={'id': 1})
         )
-
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         favorite = Favorite.objects.filter(
@@ -451,22 +466,53 @@ class FavoriteRecipeTest(APITestCase):
         """Проверяем возможность API несколько раз добавлять
         один и тот же рецепт в избранное."""
         response = self.authenticated_client.post(
-            reverse('recipes:favorite-list', kwargs={'id': 2})
+            reverse('recipes:recipes-favorite', kwargs={'id': 2})
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_unauthorized_favorite(self):
-        """Проверяем возможность API отказа в доступе при добавлении
+        """Проверяем возможность API отказывать в доступе при добавлении
         рецепта в избранное неавторизованным пользователем."""
         response = self.client.post(
-            reverse('recipes:favorite-list', kwargs={'id': 1})
+            reverse('recipes:recipes-favorite', kwargs={'id': 1})
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_delete_favorite(self):
         """Проверяем возможность API удалять рецепт из избранного."""
         response = self.authenticated_client.delete(
-            reverse('recipes:favorite', kwargs={'id': 1})
+            reverse('recipes:recipes-favorite', kwargs={'id': 2})
         )
-        print(response)
-        self.assertEqual(response.data, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_delete_no_recipe_in_favorite(self):
+        """Проверяем возможность API выдавать правильную ошибку на запрос
+        удаления рецепта из избранного, который в избранном не находится."""
+        response = self.authenticated_client.delete(
+            reverse('recipes:recipes-favorite', kwargs={'id': 1})
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_no_recipe_favorite(self):
+        """Проверяем возможность API выдавать правильную ошибку на запрос
+        удаления рецепта из избранного, которого не существует."""
+        response = self.authenticated_client.delete(
+            reverse('recipes:recipes-favorite', kwargs={'id': 100})
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_unauthorized_favorite(self):
+        """Проверяем возможность API отказывать в доступе при удалении
+        рецепта из избранного неавторизованным пользователем."""
+        response = self.client.delete(
+            reverse('recipes:recipes-favorite', kwargs={'id': 2})
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_not_author_favorite(self):
+        """Проверяем возможность API отказывать в доступе при удалении
+                рецепта из избранного неавторизованным пользователем."""
+        response = self.authenticated_client2.delete(
+            reverse('recipes:recipes-favorite', kwargs={'id': 2})
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

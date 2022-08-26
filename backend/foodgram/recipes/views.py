@@ -1,5 +1,6 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404, render
+from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -11,13 +12,23 @@ from .models import (Favorite,
                      IngredientInRecipe,
                      Recipe,
                      Tag)
+from .permissions import IsAuthor
 from .serializers import (FavoriteSerializer,
                           IngredientSerializer,
                           CreateIngredientsInRecipeSerializer,
                           CreateRecipeSerializer,
                           RecipeSerializer,
+                          RecipeForFavoriteSerializer,
                           TagSerializer)
-from .viewsets import CreateDestroyViewSet
+from .viewsets import CreateDestroyViewSet, CreateRetrieveDestroyViewSet
+
+
+def get_object_or_400(klass, text_error, *args, **kwargs):
+    queryset = klass.objects.all()
+    try:
+        return queryset.get(*args, **kwargs)
+    except queryset.model.DoesNotExist:
+        raise serializers.ValidationError(text_error)
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -56,6 +67,10 @@ class RecipeViewSet(ModelViewSet):
             self.permission_classes = (AllowAny,)
         elif self.action == 'create':
             self.permission_classes = (IsAuthenticated,)
+        elif self.action == 'favorite':
+            self.permission_classes = (IsAuthor,)
+        elif self.action == 'destroy':
+            self.permission_classes = (IsAuthor,)
         return super().get_permissions()
 
     def get_serializer_class(self):
@@ -63,6 +78,27 @@ class RecipeViewSet(ModelViewSet):
             return RecipeSerializer
         elif self.action == 'create':
             return CreateRecipeSerializer
+        elif self.action == 'favorite':
+            return FavoriteSerializer
+
+    @action(methods=['post', 'delete'], detail=True)
+    def favorite(self, request, id=None):
+        recipe = get_object_or_400(Recipe, 'Такого рецепта не существует!', pk=id)
+        user = request.user
+        if request.method == 'POST':
+            if Favorite.objects.filter(user=user, recipe=recipe):
+                raise serializers.ValidationError('Рецепт уже в избранном!')
+
+            Favorite.objects.create(
+                user=user,
+                recipe=recipe
+            )
+            serializer = RecipeForFavoriteSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            favorite = get_object_or_400(Favorite, 'Рецепт не добавлен в избранное!', recipe=recipe, user=user)
+            favorite.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_destroy(self, instance):
         if instance.author == self.request.user:
