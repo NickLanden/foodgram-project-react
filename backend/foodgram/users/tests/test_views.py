@@ -3,8 +3,10 @@ import json
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from ..models import User
+from ..models import Subscription, User
 from ..serializers import UserSerializer
+
+from recipes.models import Recipe
 
 
 class GetUsers(APITestCase):
@@ -249,3 +251,193 @@ class TokenUserTest(APITestCase):
         response = self.client.post(reverse('users:logout'))
         self.assertEqual(response.status_code,
                          status.HTTP_401_UNAUTHORIZED)
+
+
+class SubscriptionTest(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.user = APIClient()
+
+        cls.test_user = User.objects.create_user(
+            username='test_username',
+            email='test_user_email@yandex.ru',
+            first_name='TestName',
+            last_name='TestLastName',
+            password='test_password1'
+        )
+        cls.authorized_user = APIClient()
+        cls.authorized_user.force_authenticate(cls.test_user)
+
+        cls.test_user2 = User.objects.create_user(
+            username='test_username2',
+            email='test_user_email2@yandex.ru',
+            first_name='TestName2',
+            last_name='TestLastName2',
+            password='test_password2'
+        )
+        cls.authorized_user2 = APIClient()
+        cls.authorized_user2.force_authenticate(cls.test_user2)
+
+        cls.test_user3 = User.objects.create_user(
+            username='test_username3',
+            email='test_user_email3@yandex.ru',
+            first_name='TestName3',
+            last_name='TestLastName3',
+            password='test_password3'
+        )
+        cls.authorized_user3 = APIClient()
+        cls.authorized_user3.force_authenticate(cls.test_user3)
+
+        cls.test_user4 = User.objects.create_user(
+            username='test_username4',
+            email='test_user_email4@yandex.ru',
+            first_name='TestName4',
+            last_name='TestLastName4',
+            password='test_password4'
+        )
+        cls.authorized_user4 = APIClient()
+        cls.authorized_user4.force_authenticate(cls.test_user4)
+
+        cls.test_recipe1 = Recipe.objects.create(
+            author=cls.test_user3,
+            name='test recipe',
+            image='recipes/63fb3d69-37e1-4832-965d-fb282d1e8ba4.jpeg',
+            text='test text',
+            cooking_time=5
+        )
+        cls.test_recipe2 = Recipe.objects.create(
+            author=cls.test_user3,
+            name='test recipe2',
+            image='recipes/63fb3d69-37e1-4832-965d-fb282d1e8ba4.jpeg',
+            text='test text2',
+            cooking_time=10
+        )
+
+    def setUp(self):
+        self.subscription2 = Subscription.objects.create(
+            author=self.test_user2,
+            subscriber=self.test_user
+        )
+        self.subscription3 = Subscription.objects.create(
+            author=self.test_user3,
+            subscriber=self.test_user
+        )
+        self.subscription4 = Subscription.objects.create(
+            author=self.test_user4,
+            subscriber=self.test_user
+        )
+
+    def test_create_subscription(self):
+        """Проверяем возможность API создавать подписку одного
+        пользователя на другого."""
+        len_before = len(Subscription.objects.all())
+        response = self.authorized_user2.post(
+            reverse('users:users-subscribe', kwargs={'id': 1})
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        len_after = len(Subscription.objects.all())
+        self.assertEqual(len_after, len_before + 1)
+
+        for field in ['email', 'id', 'username', 'first_name', 'last_name',
+                      'is_subscribed', 'recipes', 'recipes_count']:
+            with self.subTest(field=field):
+                self.assertIn(field, response.data.keys())
+
+    def test_create_self_subscription(self):
+        """Проверяем возможность API выдавать правильный ответ на
+        запрос создания подписки на самого себя."""
+        response = self.authorized_user.post(
+            reverse('users:users-subscribe', kwargs={'id': 1})
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_double_subscription(self):
+        """Проверяем возможность API выдавать правильный ответ на запрос
+        создания повторной подписки на другого пользователя."""
+        response = self.authorized_user.post(
+            reverse('users:users-subscribe', kwargs={'id': 2})
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_unauthorized_subscription(self):
+        """Проверяем возможность API отказывать в доступе неавторизованному
+        пользователю на запрос создания подписки на пользователя."""
+        response = self.user.post(
+            reverse('users:users-subscribe', kwargs={'id': 1})
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_no_author_instance_subscription(self):
+        """Проверяем возможность API возвращать правильный ответ на запрос
+        создания подписки на несуществующего пользователя."""
+        response = self.authorized_user2.post(
+            reverse('users:users-subscribe', kwargs={'id': 100})
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_subscription(self):
+        """Проверяем возможность API удалять подписку."""
+        len_before = len(Subscription.objects.all())
+        response = self.authorized_user.delete(
+            reverse('users:users-subscribe', kwargs={'id': 2})
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        len_after = len(Subscription.objects.all())
+        self.assertEqual(len_before, len_after + 1)
+
+    def test_delete_no_subscription(self):
+        """Проверяем возможность API правильно реагировать за запрос
+        удаления подписки, которой нет у пользователя."""
+        response = self.authorized_user2.delete(
+            reverse('users:users-subscribe', kwargs={'id': 1})
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_self_subscription(self):
+        """Проверяем возможность API выдавать правильный ответ на
+        запрос удаления подписки на самого себя."""
+        response = self.authorized_user.delete(
+            reverse('users:users-subscribe', kwargs={'id': 1})
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_unauthorized_subscription(self):
+        """Проверяем возможность API отказывать в доступе неавторизованному
+        пользователю на запрос удаления подписки на пользователя."""
+        response = self.user.delete(
+            reverse('users:users-subscribe', kwargs={'id': 1})
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_no_user_instance_subscription(self):
+        """Проверяем возможность API правильно реагировать на запрос
+        удаления подписки на пользователя, которого не существует."""
+        response = self.authorized_user.delete(
+            reverse('users:users-subscribe', kwargs={'id': 100})
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_list_subscriptions(self):
+        """Проверяем возможность API возвращать все подписки
+        текущего пользователя."""
+        response = self.authorized_user.get(
+            reverse('users:users-subscriptions')
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        for field in ['email', 'id', 'username', 'first_name', 'last_name',
+                      'is_subscribed', 'recipes', 'recipes_count']:
+            with self.subTest(field=field):
+                self.assertIn(field, response.data[0].keys())
+
+    def test_list_unauthorized_subscription(self):
+        """Проверяем возможность API отказывать в доступе неавторизованному
+        пользователю на запрос вывода всех подписок пользователя."""
+        response = self.user.get(
+            reverse('users:users-subscriptions')
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

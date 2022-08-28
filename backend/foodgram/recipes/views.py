@@ -105,22 +105,3 @@ class RecipeViewSet(ModelViewSet):
             instance.delete()
         else:
             return Response(status=status.HTTP_403_FORBIDDEN)
-
-
-class FavoriteViewSet(CreateDestroyViewSet):
-    queryset = Favorite.objects.all()
-    serializer_class = FavoriteSerializer
-
-    def perform_create(self, serializer):
-        recipe_id = self.kwargs['id']
-        recipe = get_object_or_404(Recipe, id=recipe_id)
-        user = self.request.user
-        if Favorite.objects.filter(user=user, recipe=recipe):
-            raise serializers.ValidationError('Рецепт уже в избранном!')
-        serializer.save(user=user, recipe=recipe)
-
-    def perform_destroy(self, instance):
-        if instance.user == self.request.user:
-            instance.delete()
-        else:
-            return Response(status=status.HTTP_403_FORBIDDEN)

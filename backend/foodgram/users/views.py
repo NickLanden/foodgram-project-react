@@ -1,3 +1,5 @@
+from collections import OrderedDict
+from django.shortcuts import get_object_or_404
 from djoser.serializers import (SetPasswordSerializer,
                                 TokenCreateSerializer,
                                 TokenSerializer)
@@ -7,13 +9,18 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import serializers
 
 from .models import Subscription, User
 from .serializers import (
-    # SubscriptionSerializer,
+    RecipeForSubscriptionSerializer,
+    SubscriptionSerializer,
+    UserForSubscriptionSerializer,
     UserSerializer,
     UserCreateSerializer
 )
+from recipes.permissions import IsAuthor
+from recipes.views import get_object_or_400
 
 
 class UserViewSet(mixins.RetrieveModelMixin,
@@ -28,16 +35,20 @@ class UserViewSet(mixins.RetrieveModelMixin,
             return UserCreateSerializer
         elif self.action == 'set_password':
             return SetPasswordSerializer
-        # elif self.action == 'subscription':
-        #     return SubscriptionSerializer
+        elif self.action == 'subscriptions':
+            return SubscriptionSerializer
         else:
             return UserSerializer
 
     def get_permissions(self):
         if self.action in ('list', 'create'):
             self.permission_classes = [AllowAny]
-        elif self.action in ('retrieve', 'me', 'subscriptions'):
+        elif self.action in ('retrieve', 'me'):
             self.permission_classes = [IsAuthenticated]
+        elif self.action == 'subscribe':
+            self.permission_classes = [IsAuthor]
+        elif self.action == 'subscriptions':
+            self.permission_classes = [IsAuthor]
         return super().get_permissions()
 
     @action(methods=['get'], detail=False,
@@ -55,15 +66,61 @@ class UserViewSet(mixins.RetrieveModelMixin,
         self.request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # @action(methods=['get'], detail=False)
-    # def subscriptions(self, request):
-    #     user = request.user
-    #     subs = Subscription.objects.filter(subscriber=user)
-    #     authors = [x.author for x in subs]
-    #     print(authors)
-    #     serializer = self.get_serializer(authors, many=True)
-    #     print(serializer.data)
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
+    @action(methods=['post', 'delete'], detail=True)
+    def subscribe(self, request, id=None):
+        user = request.user
+        author = get_object_or_404(User, pk=id)
+
+        if user == author:
+            raise serializers.ValidationError('Нельзя подписываться/отписывать от самого себя!')
+
+        if request.method == 'POST':
+            if Subscription.objects.filter(author=author, subscriber=user):
+                raise serializers.ValidationError('Вы уже подписаны на этого пользователя!')
+
+            Subscription.objects.create(
+                author=author,
+                subscriber=user
+            )
+            recipes = author.recipes.all()
+            serializer = UserForSubscriptionSerializer(author)
+
+            data = serializer.data
+
+            data['recipes'] = RecipeForSubscriptionSerializer(recipes, many=True).data
+            data['recipes_count'] = len(recipes)
+
+            return Response(data, status=status.HTTP_201_CREATED)
+        else:
+            subscription = get_object_or_400(
+                Subscription,
+                'Вы не подписаны на этого пользователя!',
+                author=author,
+                subscriber=user
+            )
+            subscription.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['get'], detail=False)
+    def subscriptions(self, request):
+        user = request.user
+        subscriptions = user.subscriber.all()
+        authors = []
+
+        for subscription in subscriptions:
+            author = subscription.author
+
+            author_serializer = UserForSubscriptionSerializer(author)
+            data = author_serializer.data
+
+            author_recipes = author.recipes.all()
+
+            data['recipes'] = RecipeForSubscriptionSerializer(author_recipes, many=True).data
+            data['recipes_count'] = len(author_recipes)
+
+            authors.append(data)
+
+        return Response(authors, status=status.HTTP_200_OK)
 
 
 class TokenCreateView(TokenCreateView):
