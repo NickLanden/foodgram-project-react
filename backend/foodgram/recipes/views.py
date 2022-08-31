@@ -1,4 +1,8 @@
+import datetime
+import os
+from django.db.utils import IntegrityError
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
@@ -7,9 +11,11 @@ from rest_framework.response import Response
 from rest_framework import serializers, status
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
+from foodgram import settings
 from .models import (Favorite,
                      Ingredient,
                      IngredientInRecipe,
+                     ShoppingCart,
                      Recipe,
                      Tag)
 from .permissions import IsAuthor
@@ -65,11 +71,9 @@ class RecipeViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
             self.permission_classes = (AllowAny,)
-        elif self.action == 'create':
+        elif self.action in ('create', 'download_shopping_cart'):
             self.permission_classes = (IsAuthenticated,)
-        elif self.action == 'favorite':
-            self.permission_classes = (IsAuthor,)
-        elif self.action == 'destroy':
+        elif self.action in ('favorite', 'destroy'):
             self.permission_classes = (IsAuthor,)
         return super().get_permissions()
 
@@ -100,8 +104,69 @@ class RecipeViewSet(ModelViewSet):
             favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def perform_destroy(self, instance):
-        if instance.author == self.request.user:
-            instance.delete()
+    @action(methods=['get'], detail=False)
+    def download_shopping_cart(self, request):
+        file_path = os.path.join(
+            settings.MEDIA_ROOT,
+            'recipes/shopping_cart/',
+            str(request.user)
+        )
+
+        os.makedirs(file_path, exist_ok=True)
+        file = os.path.join(file_path, str(datetime.datetime.now()) + '.txt')
+
+        user = request.user
+        purchases = ShoppingCart.objects.filter(user=user)
+
+        with open(file, 'w') as f:
+            cart = dict()
+            for purchase in purchases:
+                ingredients = IngredientInRecipe.objects.filter(
+                    recipe=purchase.recipe.id
+                )
+                for r in ingredients:
+                    i = Ingredient.objects.get(pk=r.ingredient.id)
+                    point_name = f'{i.name} ({i.measurement_unit})'
+                    if point_name in cart.keys():
+                        cart[point_name] += r.amount
+                    else:
+                        cart[point_name] = r.amount
+            for name, amount in cart.items():
+                f.write(f'* {name} - {amount}\n')
+
+        with open(file, 'rb') as f:
+            response = HttpResponse(
+                f.read(), content_type="application/force-download")
+            response['Content-Disposition'] = 'inline; filename=' + file
+            return response
+
+    @action(methods=['post', 'delete'], detail=True)
+    def shopping_cart(self, request, id=None):
+        recipe = get_object_or_400(
+            Recipe, 'Такого рецепта не существует!', pk=id)
+
+        if request.method == 'POST':
+
+            try:
+                ShoppingCart.objects.create(
+                    user=request.user, recipe=recipe)
+            except IntegrityError:
+                error = 'Этот рецепт уже добавлен в список покупок!'
+                return Response(
+                    data={'errors': error},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            serializer = RecipeForFavoriteSerializer(
+                recipe, context={'request': request}
+            )
+            return Response(
+                serializer.data, status=status.HTTP_201_CREATED)
         else:
-            return Response(status=status.HTTP_403_FORBIDDEN)
+            cart = get_object_or_400(
+                ShoppingCart,
+                'Такого рецепта нет в вашем списке покупок!',
+                user=request.user,
+                recipe=recipe)
+            cart.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)

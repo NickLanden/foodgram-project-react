@@ -4,7 +4,7 @@ from rest_framework.test import APIClient, APITestCase
 import json
 
 from ..models import (Favorite, Ingredient, IngredientInRecipe,
-                      Recipe, Tag, TagInRecipe)
+                      Recipe, ShoppingCart, Tag, TagInRecipe)
 from ..serializers import (IngredientSerializer,
                            IngredientInRecipeSerializer,
                            CreateIngredientsInRecipeSerializer,
@@ -516,3 +516,141 @@ class FavoriteRecipeTest(APITestCase):
             reverse('recipes:recipes-favorite', kwargs={'id': 2})
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class ShoppingCartTest(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.test_user = User.objects.create_user(
+            username='test_user',
+            email='test_user@gmail.ru',
+            first_name='TestUserName',
+            last_name='TestUserLastName',
+            password='test_password'
+        )
+        cls.test_user2 = User.objects.create_user(
+            username='test_user2',
+            email='test_user2@gmail.ru',
+            first_name='TestUser2Name',
+            last_name='TestUser2LastName',
+            password='test_password2'
+        )
+
+        cls.client = APIClient()
+
+        cls.authenticated_client = APIClient()
+        cls.authenticated_client.force_authenticate(cls.test_user)
+
+        cls.authenticated_client2 = APIClient()
+        cls.authenticated_client2.force_authenticate(cls.test_user2)
+
+        cls.test_recipe = Recipe.objects.create(
+            author=cls.test_user,
+            name='test recipe',
+            image='recipes/63fb3d69-37e1-4832-965d-fb282d1e8ba4.jpeg',
+            text='test text',
+            cooking_time=5
+        )
+
+    def setUp(self):
+        self.shopping_cart = ShoppingCart.objects.create(
+            user=self.test_user,
+            recipe=self.test_recipe
+        )
+
+    def test_download_shopping_cart(self):
+        """Проверяем возможность API возвращать список покупок файлом
+        при соответствующем запросе."""
+        response = self.authenticated_client2.get(
+            reverse('recipes:recipes-download-shopping-cart')
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_unauthorized_download_shopping_cart(self):
+        """Проверяем возможность API отказывать неавторизованным
+        пользователям скачивать список покупок."""
+        response = self.client.get(
+            reverse('recipes:recipes-download-shopping-cart')
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_shopping_cart(self):
+        """Проверяем возможность API добавлять рецепт в список покупок."""
+        response = self.authenticated_client2.post(
+            reverse('recipes:recipes-shopping-cart',
+                    kwargs={'id': self.test_recipe.id})
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        for field in ['id', 'name', 'image', 'cooking_time']:
+            with self.subTest(field=field):
+                self.assertIn(field, response.data.keys())
+
+    def test_create_no_recipe_shopping_cart(self):
+        """Проверяем возможность API возвращать список покупок файлом
+        при соответствующем запросе."""
+        response = self.authenticated_client2.post(
+            reverse('recipes:recipes-shopping-cart',
+                    kwargs={'id': 100})
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_double_recipe_in_shopping_cart(self):
+        """Проверяем возможность API правильно реагировать при попытке
+        добавить рецепт повторно в список покупок."""
+        response = self.authenticated_client.post(
+            reverse('recipes:recipes-shopping-cart',
+                    kwargs={'id': self.test_recipe.id})
+        )
+        self.assertEqual(response.status_code,
+                         status.HTTP_400_BAD_REQUEST)
+        self.assertIn('errors', response.data.keys())
+        self.assertEqual(len(response.data.keys()), 1)
+
+    def test_create_unauthorized_shopping_cart(self):
+        """Проверяем возможность API отказывать в доступе при
+        попытке неавторизованного пользователя добавить рецепт
+        в список покупок."""
+        response = self.client.post(
+            reverse('recipes:recipes-shopping-cart',
+                    kwargs={'id': self.test_recipe.id})
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_shopping_cart(self):
+        """Проверяем возможность API удалять по запросу рецепты
+        из списка покупок."""
+        cart_before = len(ShoppingCart.objects.all())
+        response = self.authenticated_client.delete(
+            reverse('recipes:recipes-shopping-cart',
+                    kwargs={'id': self.test_recipe.id})
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_204_NO_CONTENT)
+
+        cart_after = len(ShoppingCart.objects.all())
+        self.assertEqual(cart_before, cart_after + 1)
+
+    def test_delete_no_recipe_in_shopping_cart(self):
+        """Проверяем возможность API правильно реагировать на запрос
+        удаления рецепта из списка покупок, которого там нет."""
+        response = self.authenticated_client2.delete(
+            reverse('recipes:recipes-shopping-cart',
+                    kwargs={'id': self.test_recipe.id})
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_unauthorized_shopping_cart(self):
+        """Проверяем возможность API отказывать в доступе при
+        попытке неавторизованного пользователя удалить рецепт
+        из списка покупок."""
+        response = self.client.delete(
+            reverse('recipes:recipes-shopping-cart',
+                    kwargs={'id': self.test_recipe.id})
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED)
