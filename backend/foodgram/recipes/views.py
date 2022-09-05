@@ -71,19 +71,23 @@ class RecipeViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
             self.permission_classes = (AllowAny,)
-        elif self.action in ('create', 'download_shopping_cart'):
+        elif self.action in (
+                'create', 'shopping_cart', 'download_shopping_cart'):
             self.permission_classes = (IsAuthenticated,)
-        elif self.action in ('favorite', 'destroy'):
+        elif self.action in ('favorite', 'destroy', 'partial_update'):
             self.permission_classes = (IsAuthor,)
         return super().get_permissions()
 
     def get_serializer_class(self):
+        print(self.action)
         if self.action in ('list', 'retrieve'):
             return RecipeSerializer
         elif self.action == 'create':
             return CreateRecipeSerializer
         elif self.action == 'favorite':
             return FavoriteSerializer
+        elif self.action == 'partial_update':
+            return CreateRecipeSerializer
 
     @action(methods=['post', 'delete'], detail=True)
     def favorite(self, request, id=None):

@@ -50,7 +50,7 @@ class TagTest(APITestCase):
         )
         tag = Tag.objects.get(pk=1)
         serializer = TagSerializer(tag)
-        print(serializer)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, serializer.data)
 
@@ -230,7 +230,6 @@ class RecipeTest(APITestCase):
             reverse('recipes:recipes-detail',
                     kwargs={'id': 1})
         )
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_retrieve_user_in_recipes(self):
@@ -327,11 +326,6 @@ class CreateRecipeTest(APITestCase):
             slug='new'
         )
 
-        # "ingredients": [
-        #     {"id": 1, "amount": 1},
-        #     {"id": 2, "amount": 100}
-        # ],
-
         cls.doshirak_payload = {
             "tags": [
                 1,
@@ -343,6 +337,44 @@ class CreateRecipeTest(APITestCase):
             ],
             "name": "Доширак",
             "text": "Заливаем кипятком и ждем 7 минут. Приятного аппетита!",
+            "cooking_time": 7
+        }
+
+        cls.update_payload = {
+            "tags": [
+                1
+            ],
+            "ingredients": [
+                {"id": 1, "amount": 1}
+            ],
+            "name": "Сосисочная яичница",
+            "text": "Нарезать сосиски, обжарить на среднем огне, залит яйцами.",
+            "cooking_time": 7
+        }
+
+        cls.update_payload2 = {
+            "tags": [
+                1,
+                2
+            ],
+            "ingredients": [
+                {"id": 1, "amount": 10},
+                {"id": 2, "amount": 500}
+            ],
+            "name": "Сосисочная яичница",
+            "text": "Нарезать сосиски, обжарить на среднем огне, залит яйцами.",
+            "cooking_time": 7
+        }
+
+        cls.update_payload3 = {
+            "tags": [
+                1
+            ],
+            "ingredients": [
+                {"id": 1, "amount": 10}
+            ],
+            "name": "Сосисочная яичница",
+            "text": "Нарезать сосиски, обжарить на среднем огне, залит яйцами.",
             "cooking_time": 7
         }
 
@@ -361,8 +393,6 @@ class CreateRecipeTest(APITestCase):
             data=json.dumps(self.doshirak_payload),
             content_type='application/json'
         )
-
-        # print(response.data)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(Recipe.objects.all()), 2)
@@ -397,6 +427,74 @@ class CreateRecipeTest(APITestCase):
             reverse('recipes:recipes-detail', kwargs={'id': 1}),
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_update_recipe(self):
+        """Проверяем возможность API обновлять рецепт."""
+        response = self.authenticated_client.patch(
+            reverse('recipes:recipes-detail', kwargs={'id': 1}),
+            data=json.dumps(self.update_payload),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'],
+                         self.update_payload['name'])
+        self.assertEqual(response.data['cooking_time'],
+                         self.update_payload['cooking_time'])
+
+        # Проверяем, что при обновлении рецепта могут
+        # изменяться/добавляться экземпляры связанных моделей.
+        response = self.authenticated_client.patch(
+            reverse('recipes:recipes-detail', kwargs={'id': 1}),
+            data=json.dumps(self.update_payload2),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['tags']),
+                         len(self.update_payload2['tags']))
+        self.assertEqual(len(response.data['ingredients']),
+                         len(self.update_payload2['ingredients']))
+        self.assertEqual(response.data['ingredients'][0]['amount'],
+                         self.update_payload2['ingredients'][0]['amount'])
+
+        # Проверяем, что при обновлении рецепта могут
+        # удаляться экземпляры связанных моделей.
+        response = self.authenticated_client.patch(
+            reverse('recipes:recipes-detail', kwargs={'id': 1}),
+            data=json.dumps(self.update_payload3),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['tags']),
+                         len(self.update_payload3['tags']))
+        self.assertEqual(len(response.data['ingredients']),
+                         len(self.update_payload3['ingredients']))
+
+    def test_update_unauthorized_recipe(self):
+        response = self.client.patch(
+            reverse('recipes:recipes-detail', kwargs={'id': 1}),
+            data=json.dumps(self.update_payload3),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_update_not_author_recipe(self):
+        response = self.authenticated_client2.patch(
+            reverse('recipes:recipes-detail', kwargs={'id': 1}),
+            data=json.dumps(self.update_payload3),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_update_no_object_recipe(self):
+        response = self.authenticated_client.patch(
+            reverse('recipes:recipes-detail', kwargs={'id': 100}),
+            data=json.dumps(self.update_payload3),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class FavoriteRecipeTest(APITestCase):
