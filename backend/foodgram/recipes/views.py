@@ -1,6 +1,8 @@
 import datetime
 import os
+from django.contrib import admin
 from django.db.utils import IntegrityError
+from django.utils.html import format_html
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render
@@ -67,6 +69,38 @@ class RecipeViewSet(ModelViewSet):
     lookup_field = 'id'
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('author',)
+
+    def get_queryset(self):
+        queryset = Recipe.objects.all()
+        print('first:', queryset)
+        print(self.request.query_params)
+
+        if self.action == 'list':
+            tags = self.request.query_params.get('tags')
+            is_favorited = self.request.query_params.get('is_favorited')
+            is_in_shopping_cart = self.request.query_params.get('is_in_shopping_cart')
+
+            if tags is not None:
+                print('tags')
+                queryset = queryset.filter(tags__slug=tags)
+
+            if is_favorited is not None:
+                print('is_favorited')
+                favorites = Favorite.objects.filter(user=self.request.user)
+                recipes = []
+                for f in favorites:
+                    recipes.append(f.recipe.id)
+                queryset = queryset.filter(id__in=recipes)
+
+            if is_in_shopping_cart is not None:
+                cart = ShoppingCart.objects.filter(user=self.request.user)
+                recipes = []
+                for c in cart:
+                    recipes.append(c.recipe.id)
+                queryset = queryset.filter(id__in=recipes)
+
+        print('last', queryset)
+        return queryset
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):

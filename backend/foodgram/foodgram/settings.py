@@ -17,6 +17,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '[::1]',
     'testserver',
+    'host.docker.internal',
 ]
 
 AUTH_USER_MODEL = 'users.User'

@@ -68,7 +68,15 @@ class RecipeForSubscriptionSerializer(serializers.ModelSerializer):
 
 
 class UserForSubscriptionSerializer(UserSerializer):
+    recipes = RecipeForSubscriptionSerializer(many=True)
+    recipes_count = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = ('email', 'id', 'username', 'first_name',
-                  'last_name', 'is_subscribed')
+                  'last_name', 'is_subscribed', 'recipes',
+                  'recipes_count')
+
+    def get_recipes_count(self, instance):
+        author = User.objects.get(username=instance.username)
+        return len(Recipe.objects.filter(author=author))

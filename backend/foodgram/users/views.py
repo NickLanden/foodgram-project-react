@@ -7,6 +7,7 @@ from djoser import utils
 from djoser.views import TokenCreateView
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import serializers
@@ -82,15 +83,9 @@ class UserViewSet(mixins.RetrieveModelMixin,
                 author=author,
                 subscriber=user
             )
-            recipes = author.recipes.all()
             serializer = UserForSubscriptionSerializer(author)
 
-            data = serializer.data
-
-            data['recipes'] = RecipeForSubscriptionSerializer(recipes, many=True).data
-            data['recipes_count'] = len(recipes)
-
-            return Response(data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             subscription = get_object_or_400(
                 Subscription,
@@ -105,22 +100,17 @@ class UserViewSet(mixins.RetrieveModelMixin,
     def subscriptions(self, request):
         user = request.user
         subscriptions = user.subscriber.all()
+
+        page = self.paginate_queryset(subscriptions)
+
         authors = []
 
-        for subscription in subscriptions:
-            author = subscription.author
+        for p in page:
+            author = p.author
+            authors.append(author)
+        serializer = UserForSubscriptionSerializer(authors, many=True)
 
-            author_serializer = UserForSubscriptionSerializer(author)
-            data = author_serializer.data
-
-            author_recipes = author.recipes.all()
-
-            data['recipes'] = RecipeForSubscriptionSerializer(author_recipes, many=True).data
-            data['recipes_count'] = len(author_recipes)
-
-            authors.append(data)
-
-        return Response(authors, status=status.HTTP_200_OK)
+        return self.get_paginated_response(serializer.data)
 
 
 class TokenCreateView(TokenCreateView):
