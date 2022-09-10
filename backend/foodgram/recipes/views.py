@@ -1,19 +1,18 @@
 import datetime
 import os
-from django.contrib import admin
+
 from django.db.utils import IntegrityError
-from django.utils.html import format_html
-from django_filters.rest_framework import DjangoFilterBackend
-from django.http import FileResponse, HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.http import HttpResponse
+from django_filters import rest_framework as filters
+from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import serializers, status
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from foodgram import settings
+from .filters import RecipeFilter
 from .models import (Favorite,
                      Ingredient,
                      IngredientInRecipe,
@@ -23,12 +22,10 @@ from .models import (Favorite,
 from .permissions import IsAuthor
 from .serializers import (FavoriteSerializer,
                           IngredientSerializer,
-                          CreateIngredientsInRecipeSerializer,
                           CreateRecipeSerializer,
                           RecipeSerializer,
                           RecipeForFavoriteSerializer,
                           TagSerializer)
-from .viewsets import CreateDestroyViewSet, CreateRetrieveDestroyViewSet
 
 
 def get_object_or_400(klass, text_error, *args, **kwargs):
@@ -67,13 +64,11 @@ class RecipeViewSet(ModelViewSet):
     """ViewSet для обработки запросов, связанных с рецептами."""
     queryset = Recipe.objects.all()
     lookup_field = 'id'
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('author',)
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_fields = ('author',)
 
     def get_queryset(self):
         queryset = Recipe.objects.all()
-        print('first:', queryset)
-        print(self.request.query_params)
 
         if self.action == 'list':
             tags = self.request.query_params.get('tags')
@@ -81,11 +76,9 @@ class RecipeViewSet(ModelViewSet):
             is_in_shopping_cart = self.request.query_params.get('is_in_shopping_cart')
 
             if tags is not None:
-                print('tags')
                 queryset = queryset.filter(tags__slug=tags)
 
             if is_favorited is not None:
-                print('is_favorited')
                 favorites = Favorite.objects.filter(user=self.request.user)
                 recipes = []
                 for f in favorites:
@@ -99,8 +92,7 @@ class RecipeViewSet(ModelViewSet):
                     recipes.append(c.recipe.id)
                 queryset = queryset.filter(id__in=recipes)
 
-        print('last', queryset)
-        return queryset
+        return queryset.order_by('-id')
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
@@ -125,20 +117,30 @@ class RecipeViewSet(ModelViewSet):
 
     @action(methods=['post', 'delete'], detail=True)
     def favorite(self, request, id=None):
-        recipe = get_object_or_400(Recipe, 'Такого рецепта не существует!', pk=id)
+        recipe = get_object_or_400(
+            Recipe,
+            'Такого рецепта не существует!',
+            pk=id
+        )
         user = request.user
         if request.method == 'POST':
             if Favorite.objects.filter(user=user, recipe=recipe):
-                raise serializers.ValidationError('Рецепт уже в избранном!')
+                raise serializers.ValidationError(
+                    'Рецепт уже в избранном!')
 
             Favorite.objects.create(
                 user=user,
                 recipe=recipe
             )
             serializer = RecipeForFavoriteSerializer(recipe)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data,
+                            status=status.HTTP_201_CREATED)
         else:
-            favorite = get_object_or_400(Favorite, 'Рецепт не добавлен в избранное!', recipe=recipe, user=user)
+            favorite = get_object_or_400(
+                Favorite, 'Рецепт не добавлен в избранное!',
+                recipe=recipe,
+                user=user
+            )
             favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -151,7 +153,8 @@ class RecipeViewSet(ModelViewSet):
         )
 
         os.makedirs(file_path, exist_ok=True)
-        file = os.path.join(file_path, str(datetime.datetime.now()) + '.txt')
+        file = os.path.join(
+            file_path, str(datetime.datetime.now()) + '.txt')
 
         user = request.user
         purchases = ShoppingCart.objects.filter(user=user)

@@ -1,14 +1,14 @@
 import base64
-from django.shortcuts import get_object_or_404
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
-from rest_framework import serializers, validators
+from rest_framework import serializers
+
 from users.serializers import UserSerializer
 from .models import (Favorite,
                      Ingredient,
                      IngredientInRecipe,
                      Recipe,
-                     ShoppingCart,
                      Tag,
                      TagInRecipe)
 
@@ -62,7 +62,9 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class CreateIngredientsInRecipeSerializer(serializers.ModelSerializer):
-    id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+    id = serializers.PrimaryKeyRelatedField(
+        queryset=Ingredient.objects.all()
+    )
     amount = serializers.IntegerField(write_only=True)
 
     class Meta:
@@ -86,7 +88,10 @@ class Base64ImageField(serializers.ImageField):
         if isinstance(data, str) and data.startswith('data:image'):
             format, imgstr = data.split(';base64,')
             ext = format.split('/')[-1]
-            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
+            data = ContentFile(
+                base64.b64decode(imgstr),
+                name='temp.' + ext
+            )
         return super().to_internal_value(data)
 
 
@@ -119,10 +124,10 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                 pk=ingredient['id'].id)
             amount = ingredient['amount']
             IngredientInRecipe.objects.create(
-                    recipe=recipe,
-                    ingredient=ingredient_instance,
-                    amount=amount
-                )
+                recipe=recipe,
+                ingredient=ingredient_instance,
+                amount=amount
+            )
 
         recipe.tags.set(tags)
         return recipe
@@ -131,14 +136,18 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         instance.image = validated_data.get('image', instance.image)
         instance.name = validated_data.get('name', instance.name)
         instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get('cooking_time', instance.cooking_time)
+        instance.cooking_time = validated_data.get(
+            'cooking_time',
+            instance.cooking_time
+        )
 
         ingredients = validated_data.pop('ingredients')
         new_ingredients = []
         for ingredient in ingredients:
 
             try:
-                in_recipe = instance.ingredients_in.get(ingredient=ingredient['id'])
+                in_recipe = instance.ingredients_in.get(
+                    ingredient=ingredient['id'])
                 new_ingredients.append(in_recipe)
                 if in_recipe.amount != ingredient['amount']:
                     in_recipe.amount = ingredient['amount']

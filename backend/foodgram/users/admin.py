@@ -4,7 +4,8 @@ from .models import Subscription, User
 
 
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'first_name', 'last_name', 'email', 'is_staff')
+    list_display = ('username', 'first_name',
+                    'last_name', 'email', 'is_staff')
     list_filter = ('email', 'first_name')
 
 

@@ -1,27 +1,24 @@
-from collections import OrderedDict
 from django.shortcuts import get_object_or_404
+from djoser import utils
 from djoser.serializers import (SetPasswordSerializer,
                                 TokenCreateSerializer,
                                 TokenSerializer)
-from djoser import utils
 from djoser.views import TokenCreateView
 from rest_framework import mixins, status, viewsets
+from rest_framework import serializers
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import serializers
 
+from recipes.permissions import IsAuthor
+from recipes.views import get_object_or_400
 from .models import Subscription, User
 from .serializers import (
-    RecipeForSubscriptionSerializer,
     SubscriptionSerializer,
     UserForSubscriptionSerializer,
     UserSerializer,
     UserCreateSerializer
 )
-from recipes.permissions import IsAuthor
-from recipes.views import get_object_or_400
 
 
 class UserViewSet(mixins.RetrieveModelMixin,
@@ -63,7 +60,8 @@ class UserViewSet(mixins.RetrieveModelMixin,
     def set_password(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        self.request.user.set_password(serializer.data.get('new_password'))
+        self.request.user.set_password(
+            serializer.data.get('new_password'))
         self.request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -73,11 +71,14 @@ class UserViewSet(mixins.RetrieveModelMixin,
         author = get_object_or_404(User, pk=id)
 
         if user == author:
-            raise serializers.ValidationError('Нельзя подписываться/отписывать от самого себя!')
+            raise serializers.ValidationError(
+                'Нельзя подписываться/отписывать от самого себя!')
 
         if request.method == 'POST':
-            if Subscription.objects.filter(author=author, subscriber=user):
-                raise serializers.ValidationError('Вы уже подписаны на этого пользователя!')
+            if Subscription.objects.filter(
+                    author=author, subscriber=user):
+                raise serializers.ValidationError(
+                    'Вы уже подписаны на этого пользователя!')
 
             Subscription.objects.create(
                 author=author,
@@ -85,7 +86,8 @@ class UserViewSet(mixins.RetrieveModelMixin,
             )
             serializer = UserForSubscriptionSerializer(author)
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(
+                serializer.data, status=status.HTTP_201_CREATED)
         else:
             subscription = get_object_or_400(
                 Subscription,

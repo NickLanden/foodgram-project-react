@@ -1,9 +1,9 @@
+# from recipes.serializers import RecipeForFavoriteSerializer
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from .models import Subscription, User
-# from recipes.serializers import RecipeForFavoriteSerializer
 from recipes.models import Recipe
+from .models import Subscription, User
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -49,7 +49,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'id', 'username', 'first_name', 'last_name', 'password')
+        fields = ('email', 'id', 'username', 'first_name',
+                  'last_name', 'password')
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
