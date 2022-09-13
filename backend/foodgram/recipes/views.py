@@ -1,18 +1,19 @@
 import datetime
 import os
+import io
 
 from django.db.utils import IntegrityError
-from django.http import HttpResponse
+from django.http import FileResponse, HttpResponse
 from django_filters import rest_framework as filters
 from rest_framework import serializers, status
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from reportlab.pdfgen import canvas
 
 from foodgram import settings
-from .filters import RecipeFilter
+from .filters import CustomSearchFilter
 from .models import (Favorite,
                      Ingredient,
                      IngredientInRecipe,
@@ -26,6 +27,7 @@ from .serializers import (FavoriteSerializer,
                           RecipeSerializer,
                           RecipeForFavoriteSerializer,
                           TagSerializer)
+from .download_shopping_cart import download_shopping_cart
 
 
 def get_object_or_400(klass, text_error, *args, **kwargs):
@@ -43,10 +45,6 @@ class TagViewSet(ReadOnlyModelViewSet):
     permission_classes = (AllowAny,)
     pagination_class = None
     lookup_field = 'id'
-
-
-class CustomSearchFilter(SearchFilter):
-    search_param = "name"
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
@@ -71,12 +69,12 @@ class RecipeViewSet(ModelViewSet):
         queryset = Recipe.objects.all()
 
         if self.action == 'list':
-            tags = self.request.query_params.get('tags')
+            tags = self.request.query_params.getlist('tags')
             is_favorited = self.request.query_params.get('is_favorited')
             is_in_shopping_cart = self.request.query_params.get('is_in_shopping_cart')
 
             if tags is not None:
-                queryset = queryset.filter(tags__slug=tags)
+                queryset = queryset.filter(tags__slug__in=tags)
 
             if is_favorited is not None:
                 favorites = Favorite.objects.filter(user=self.request.user)
@@ -105,7 +103,6 @@ class RecipeViewSet(ModelViewSet):
         return super().get_permissions()
 
     def get_serializer_class(self):
-        print(self.action)
         if self.action in ('list', 'retrieve'):
             return RecipeSerializer
         elif self.action == 'create':
@@ -146,40 +143,7 @@ class RecipeViewSet(ModelViewSet):
 
     @action(methods=['get'], detail=False)
     def download_shopping_cart(self, request):
-        file_path = os.path.join(
-            settings.MEDIA_ROOT,
-            'recipes/shopping_cart/',
-            str(request.user)
-        )
-
-        os.makedirs(file_path, exist_ok=True)
-        file = os.path.join(
-            file_path, str(datetime.datetime.now()) + '.txt')
-
-        user = request.user
-        purchases = ShoppingCart.objects.filter(user=user)
-
-        with open(file, 'w') as f:
-            cart = dict()
-            for purchase in purchases:
-                ingredients = IngredientInRecipe.objects.filter(
-                    recipe=purchase.recipe.id
-                )
-                for r in ingredients:
-                    i = Ingredient.objects.get(pk=r.ingredient.id)
-                    point_name = f'{i.name} ({i.measurement_unit})'
-                    if point_name in cart.keys():
-                        cart[point_name] += r.amount
-                    else:
-                        cart[point_name] = r.amount
-            for name, amount in cart.items():
-                f.write(f'* {name} - {amount}\n')
-
-        with open(file, 'rb') as f:
-            response = HttpResponse(
-                f.read(), content_type="application/force-download")
-            response['Content-Disposition'] = 'inline; filename=' + file
-            return response
+        return download_shopping_cart(request)
 
     @action(methods=['post', 'delete'], detail=True)
     def shopping_cart(self, request, id=None):

@@ -63,12 +63,12 @@ class Subscription(models.Model):
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
-        constraints = [
+        constraints = (
             models.UniqueConstraint(
                 fields=('author_id', 'subscriber_id'),
                 name='unique_subscriptions',
-            )
-        ]
+            ),
+        )
 
     def __str__(self):
         return f'{self.author} - {self.subscriber}'

@@ -106,20 +106,21 @@ class IngredientTest(APITestCase):
     def test_list_filter_ingredients(self):
         """Проверим способность API возвращать лист ингредиентов,
         отфильтрованных по названию ингредиента."""
+        url = 'http://127.0.0.1:8000/api/ingredients/'
+        param = 'name'
+        values = ['Я', 'Со', 'си']
 
-        urls = {
-            'http://127.0.0.1:8000/api/ingredients/?name=Я': 1,
-            'http://127.0.0.1:8000/api/ingredients/?name=Со': 1,
-            'http://127.0.0.1:8000/api/ingredients/?name=си': 0,
-        }
+        all_ingredients = Ingredient.objects.all()
 
-        for url, amount in urls.items():
-            response = self.client.get(
-                url,
-                follow=True
-            )
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(len(response.data), amount)
+        for i in values:
+            with self.subTest(value=i):
+                response = self.client.get(
+                    f'{url}?{param}={i}',
+                    follow=True
+                )
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(
+                    len(response.data), len(all_ingredients.filter(name__startswith=i)))
 
 
 class RecipeTest(APITestCase):
