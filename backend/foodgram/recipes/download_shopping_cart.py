@@ -1,12 +1,6 @@
 import datetime
 from django.http import FileResponse
-from fpdf import FPDF
-import io
 import os
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import SimpleDocTemplate, Spacer, Paragraph
 
 from foodgram import settings
 from .models import Ingredient, IngredientInRecipe, ShoppingCart

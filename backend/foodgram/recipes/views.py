@@ -1,22 +1,14 @@
-import datetime
-import os
-import io
-
 from django.db.utils import IntegrityError
-from django.http import FileResponse, HttpResponse
 from django_filters import rest_framework as filters
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-from reportlab.pdfgen import canvas
 
-from foodgram import settings
 from .filters import CustomSearchFilter
 from .models import (Favorite,
                      Ingredient,
-                     IngredientInRecipe,
                      ShoppingCart,
                      Recipe,
                      Tag)

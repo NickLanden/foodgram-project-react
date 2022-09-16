@@ -9,7 +9,6 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display = ('name', 'author', 'in_favorite')
     list_filter = ('name', 'author', 'tags')
 
-    @admin.display(description='в избранном')
     def in_favorite(self, obj):
         return len(obj.in_favorites.all())
 
