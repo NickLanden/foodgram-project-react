@@ -175,7 +175,8 @@ class ChangePasswordUserTest(APITestCase):
 
     def test_change_password_invalid_user(self):
         """Проверяем способность API реагировать верным образом на
-        некорректные входные данные при попытке сменить пароль текущего пользователя."""
+        некорректные входные данные при попытке сменить пароль 
+        текущего пользователя."""
         response = self.authorized_client.post(
             reverse('users:users-set-password'),
             self.invalid_payload
