@@ -1,0 +1,15 @@
+pip~=22.1.2
+wheel~=0.36.2
+setuptools~=49.2.1
+python-dotenv~=0.20.0
+psycopg2-binary~=2.8.6
+Django==2.2.19
+Pillow==9.2.0
+djangorestframework~=3.13.1
+pytest==6.2.4
+gunicorn==20.0.4
+sqlparse==0.3.1
+django-filter==2.4.0
+requests==2.26.0
+django-colorfield==0.7.2
+djoser==2.1.0
