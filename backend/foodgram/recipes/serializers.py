@@ -93,7 +93,7 @@ class Base64ImageField(serializers.ImageField):
                 name='temp.' + ext
             )
         return super().to_internal_value(data)
-   
+
 
 def ingredients_update(instance, validated_data):
     ingredients = validated_data.pop('ingredients')
@@ -127,6 +127,7 @@ def ingredients_update(instance, validated_data):
         for ing in recipe_ingredients:
             if ing not in new_ingredients:
                 ing.delete()
+
 
 def tags_update(instance, validated_data):
     tags = validated_data.pop('tags')
