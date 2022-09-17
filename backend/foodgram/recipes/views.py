@@ -63,7 +63,8 @@ class RecipeViewSet(ModelViewSet):
         if self.action == 'list':
             tags = self.request.query_params.getlist('tags')
             is_favorited = self.request.query_params.get('is_favorited')
-            is_in_shopping_cart = self.request.query_params.get('is_in_shopping_cart')
+            is_in_shopping_cart = self.request.query_params.get(
+              'is_in_shopping_cart')
 
             if tags is not None:
                 queryset = queryset.filter(tags__slug__in=tags)
