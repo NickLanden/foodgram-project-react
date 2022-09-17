@@ -15,7 +15,7 @@ def download_shopping_cart(request):
 
     os.makedirs(file_path, exist_ok=True)
     file = os.path.join(
-            file_path, str(datetime.datetime.now()) + '.txt'
+        file_path, str(datetime.datetime.now()) + '.txt'
     )
 
     user = request.user
