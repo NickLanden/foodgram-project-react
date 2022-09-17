@@ -93,6 +93,64 @@ class Base64ImageField(serializers.ImageField):
                 name='temp.' + ext
             )
         return super().to_internal_value(data)
+   
+
+def ingredients_update(instance, validated_data):
+    ingredients = validated_data.pop('ingredients')
+    new_ingredients = []
+
+    for ingredient in ingredients:
+
+        try:
+            in_recipe = instance.ingredients_in.get(
+                ingredient=ingredient['id'])
+            new_ingredients.append(in_recipe)
+            if in_recipe.amount != ingredient['amount']:
+                in_recipe.amount = ingredient['amount']
+                in_recipe.save()
+                continue
+            continue
+        except ObjectDoesNotExist:
+            ingredient_instance = Ingredient.objects.get(
+                pk=ingredient['id'].id)
+            amount = ingredient['amount']
+            new_ing_in_recipe = IngredientInRecipe.objects.create(
+                recipe=instance,
+                ingredient=ingredient_instance,
+                amount=amount
+            )
+            new_ingredients.append(new_ing_in_recipe)
+            continue
+
+    recipe_ingredients = instance.ingredients_in.all()
+    if len(recipe_ingredients) != len(ingredients):
+        for ing in recipe_ingredients:
+            if ing not in new_ingredients:
+                ing.delete()
+
+def tags_update(instance, validated_data):
+    tags = validated_data.pop('tags')
+    new_tags = []
+
+    for tag in tags:
+        try:
+            t = instance.tags_in.get(tag=tag)
+            new_tags.append(t)
+            continue
+        except ObjectDoesNotExist:
+            tag_instance = Tag.objects.get(pk=tag.id)
+            new_tag_in_recipe = TagInRecipe.objects.create(
+                recipe=instance,
+                tag=tag_instance
+            )
+            new_tags.append(new_tag_in_recipe)
+            continue
+
+    recipe_tags = instance.tags_in.all()
+    if len(recipe_tags) != len(tags):
+        for t in recipe_tags:
+            if t not in new_tags:
+                t.delete()
 
 
 class CreateRecipeSerializer(serializers.ModelSerializer):
@@ -141,58 +199,8 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
             instance.cooking_time
         )
 
-        ingredients = validated_data.pop('ingredients')
-        new_ingredients = []
-        for ingredient in ingredients:
-
-            try:
-                in_recipe = instance.ingredients_in.get(
-                    ingredient=ingredient['id'])
-                new_ingredients.append(in_recipe)
-                if in_recipe.amount != ingredient['amount']:
-                    in_recipe.amount = ingredient['amount']
-                    in_recipe.save()
-                    continue
-                continue
-            except ObjectDoesNotExist:
-                ingredient_instance = Ingredient.objects.get(
-                    pk=ingredient['id'].id)
-                amount = ingredient['amount']
-                new_ing_in_recipe = IngredientInRecipe.objects.create(
-                    recipe=instance,
-                    ingredient=ingredient_instance,
-                    amount=amount
-                )
-                new_ingredients.append(new_ing_in_recipe)
-                continue
-
-        recipe_ingredients = instance.ingredients_in.all()
-        if len(recipe_ingredients) != len(ingredients):
-            for ing in recipe_ingredients:
-                if ing not in new_ingredients:
-                    ing.delete()
-
-        tags = validated_data.pop('tags')
-        new_tags = []
-        for tag in tags:
-            try:
-                t = instance.tags_in.get(tag=tag)
-                new_tags.append(t)
-                continue
-            except ObjectDoesNotExist:
-                tag_instance = Tag.objects.get(pk=tag.id)
-                new_tag_in_recipe = TagInRecipe.objects.create(
-                    recipe=instance,
-                    tag=tag_instance
-                )
-                new_tags.append(new_tag_in_recipe)
-                continue
-
-        recipe_tags = instance.tags_in.all()
-        if len(recipe_tags) != len(tags):
-            for t in recipe_tags:
-                if t not in new_tags:
-                    t.delete()
+        ingredients_update(instance, validated_data)
+        tags_update(instance, validated_data)
 
         instance.save()
         return instance
