@@ -3,11 +3,10 @@ from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 import json
 
-from ..models import (Favorite, Ingredient, IngredientInRecipe,
-                      Recipe, ShoppingCart, Tag, TagInRecipe)
+from ..models import (Favorite, Ingredient,
+                      Recipe, ShoppingCart, Tag)
 from ..serializers import (IngredientSerializer,
                            IngredientInRecipeSerializer,
-                           CreateIngredientsInRecipeSerializer,
                            TagSerializer)
 from users.models import User
 from users.serializers import UserSerializer
@@ -120,7 +119,9 @@ class IngredientTest(APITestCase):
                 )
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(
-                    len(response.data), len(all_ingredients.filter(name__startswith=i)))
+                    len(response.data), 
+                    len(all_ingredients.filter(name__startswith=i))
+                )
 
 
 class RecipeTest(APITestCase):
@@ -179,7 +180,8 @@ class RecipeTest(APITestCase):
             author=cls.russian_president,
             name='Варенные пельмени',
             image='recipes/63fb3d69-37e1-4832-965d-fb282d1e8ba4.jpeg',
-            text='Опускаем пельмени в кипящую подсоленную воду. Варим до готовности. Добавляем сметану по желанию.',
+            text=('Опускаем пельмени в кипящую подсоленную воду. '
+                  'Варим до готовности. Добавляем сметану по желанию.'),
             cooking_time=12
         )
 
@@ -349,7 +351,8 @@ class CreateRecipeTest(APITestCase):
                 {"id": 1, "amount": 1}
             ],
             "name": "Сосисочная яичница",
-            "text": "Нарезать сосиски, обжарить на среднем огне, залит яйцами.",
+            "text": ("Нарезать сосиски, обжарить на " 
+                     "среднем огне, залит яйцами."),
             "cooking_time": 7
         }
 
@@ -363,7 +366,8 @@ class CreateRecipeTest(APITestCase):
                 {"id": 2, "amount": 500}
             ],
             "name": "Сосисочная яичница",
-            "text": "Нарезать сосиски, обжарить на среднем огне, залит яйцами.",
+            "text": ("Нарезать сосиски, обжарить на "
+                     "среднем огне, залит яйцами."),
             "cooking_time": 7
         }
 
@@ -375,7 +379,8 @@ class CreateRecipeTest(APITestCase):
                 {"id": 1, "amount": 10}
             ],
             "name": "Сосисочная яичница",
-            "text": "Нарезать сосиски, обжарить на среднем огне, залит яйцами.",
+            "text": ("Нарезать сосиски, обжарить на "
+                     "среднем огне, залит яйцами."),
             "cooking_time": 7
         }
 
