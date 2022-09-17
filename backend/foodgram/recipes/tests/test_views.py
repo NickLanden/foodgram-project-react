@@ -119,7 +119,7 @@ class IngredientTest(APITestCase):
                 )
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(
-                    len(response.data), 
+                    len(response.data),
                     len(all_ingredients.filter(name__startswith=i))
                 )
 
@@ -351,7 +351,7 @@ class CreateRecipeTest(APITestCase):
                 {"id": 1, "amount": 1}
             ],
             "name": "Сосисочная яичница",
-            "text": ("Нарезать сосиски, обжарить на " 
+            "text": ("Нарезать сосиски, обжарить на "
                      "среднем огне, залит яйцами."),
             "cooking_time": 7
         }
