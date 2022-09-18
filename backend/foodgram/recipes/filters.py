@@ -1,5 +1,5 @@
-from django.db.models import Q
 from django_filters import rest_framework as filters
+from django_filters.widgets import BooleanWidget
 from rest_framework.filters import SearchFilter
 
 from .models import Recipe
@@ -10,25 +10,29 @@ class CustomSearchFilter(SearchFilter):
 
 
 class RecipeFilter(filters.FilterSet):
-    tags = filters.CharFilter(field_name='tags__slug', lookup_expr='in')
-    is_favorited = filters.BooleanFilter(method='get_is_favorited')
+    tags = filters.AllValuesMultipleFilter(field_name='tags__slug')
+    is_favorited = filters.BooleanFilter(
+        method='get_is_favorited',
+        widget=BooleanWidget()
+    )
     is_in_shopping_cart = filters.BooleanFilter(
-        method='get_is_in_shopping_cart'
+        method='get_is_in_shopping_cart',
+        widget=BooleanWidget()
     )
 
     class Meta:
         model = Recipe
         fields = ['author', 'tags', 'is_favorited', 'is_in_shopping_cart']
-        ordering = ['id']
+        ordering = ['-id']
 
     def get_is_favorited(self, queryset, name, value):
         user = self.request.user
-        if value and user.is_authenticated:
-            return queryset.filter(favorite__user=user)
-        return queryset.filter(~Q(favorite__user=user))
+        if value:
+            return queryset.filter(favorites__user=user)
+        return queryset
 
     def get_is_in_shopping_cart(self, queryset, name, value):
         user = self.request.user
-        if value and user.is_authenticated:
-            return queryset.filter(shoppingcart__user=user)
-        return queryset.filter(~Q(shoppingcart__user=user))
+        if value:
+            return queryset.filter(shopping_cart__user=user)
+        return queryset

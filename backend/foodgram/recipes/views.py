@@ -1,12 +1,12 @@
 from django.db.utils import IntegrityError
-from django_filters import rest_framework as filters
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from .filters import CustomSearchFilter
+from .filters import CustomSearchFilter, RecipeFilter
 from .models import (Favorite,
                      Ingredient,
                      ShoppingCart,
@@ -54,31 +54,31 @@ class RecipeViewSet(ModelViewSet):
     """ViewSet для обработки запросов, связанных с рецептами."""
     queryset = Recipe.objects.all()
     lookup_field = 'id'
-    filter_backends = (filters.DjangoFilterBackend,)
-    filter_fields = ('author',)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
-    def get_queryset(self):
-        queryset = Recipe.objects.all()
-
-        if self.action == 'list':
-            tags = self.request.query_params.getlist('tags')
-            is_favorited = self.request.query_params.get('is_favorited')
-            is_in_shopping_cart = self.request.query_params.get(
-                'is_in_shopping_cart'
-            )
-
-            if tags is not None:
-                queryset = queryset.filter(tags__slug__in=tags)
-
-            if is_favorited is not None:
-                queryset = queryset.filter(favorites__user=self.request.user)
-
-            if is_in_shopping_cart is not None:
-                queryset = queryset.filter(
-                  shopping_cart__user=self.request.user
-                )
-
-        return queryset.order_by('-id')
+    # def get_queryset(self):
+    #     queryset = Recipe.objects.all()
+    #
+    #     if self.action == 'list':
+    #         tags = self.request.query_params.getlist('tags')
+    #         is_favorited = self.request.query_params.get('is_favorited')
+    #         is_in_shopping_cart = self.request.query_params.get(
+    #             'is_in_shopping_cart'
+    #         )
+    #
+    #         if tags is not None:
+    #             queryset = queryset.filter(tags__slug__in=tags)
+    #
+    #         if is_favorited is not None:
+    #             queryset = queryset.filter(favorites__user=self.request.user)
+    #
+    #         if is_in_shopping_cart is not None:
+    #             queryset = queryset.filter(
+    #                 shopping_cart__user=self.request.user
+    #             )
+    #
+    #     return queryset.order_by('-id')
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
