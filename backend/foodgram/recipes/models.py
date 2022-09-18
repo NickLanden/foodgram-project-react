@@ -188,7 +188,7 @@ class ShoppingCart(models.Model):
         to=Recipe,
         on_delete=models.CASCADE,
         verbose_name='Рецепт в корзине',
-        related_name='shopping_cart'
+        related_name='in_shopping_cart'
     )
 
     def __str__(self):
