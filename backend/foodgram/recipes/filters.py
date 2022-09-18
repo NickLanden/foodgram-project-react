@@ -2,7 +2,7 @@ from django_filters import rest_framework as filters
 from django_filters.widgets import BooleanWidget
 from rest_framework.filters import SearchFilter
 
-from .models import Recipe
+from .models import Recipe, Tag
 
 
 class CustomSearchFilter(SearchFilter):
@@ -10,7 +10,13 @@ class CustomSearchFilter(SearchFilter):
 
 
 class RecipeFilter(filters.FilterSet):
-    tags = filters.AllValuesMultipleFilter(field_name='tags__slug')
+    # tags = filters.AllValuesMultipleFilter(field_name='tags__slug')
+    tags = filters.ModelMultipleChoiceFilter(
+        field_name='tags__slug',
+        queryset=Tag.objects.all(),
+        label='Tags',
+        to_field_name='slug'
+    )
     is_favorited = filters.BooleanFilter(
         method='get_is_favorited',
         widget=BooleanWidget()
@@ -28,7 +34,7 @@ class RecipeFilter(filters.FilterSet):
     def get_is_favorited(self, queryset, name, value):
         user = self.request.user
         if value:
-            return queryset.filter(favorites__user=user)
+            return queryset.filter(in_favorites__user=user)
         return queryset
 
     def get_is_in_shopping_cart(self, queryset, name, value):
