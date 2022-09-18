@@ -71,18 +71,10 @@ class RecipeViewSet(ModelViewSet):
                 queryset = queryset.filter(tags__slug__in=tags)
 
             if is_favorited is not None:
-                favorites = Favorite.objects.filter(user=self.request.user)
-                recipes = []
-                for f in favorites:
-                    recipes.append(f.recipe.id)
-                queryset = queryset.filter(id__in=recipes)
+                queryset = queryset.filter(favorites__user=self.request.user)
 
             if is_in_shopping_cart is not None:
-                cart = ShoppingCart.objects.filter(user=self.request.user)
-                recipes = []
-                for c in cart:
-                    recipes.append(c.recipe.id)
-                queryset = queryset.filter(id__in=recipes)
+                queryset = queryset.filter(shopping_cart__user=self.request.user)
 
         return queryset.order_by('-id')
 
