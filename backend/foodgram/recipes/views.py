@@ -74,7 +74,9 @@ class RecipeViewSet(ModelViewSet):
                 queryset = queryset.filter(favorites__user=self.request.user)
 
             if is_in_shopping_cart is not None:
-                queryset = queryset.filter(shopping_cart__user=self.request.user)
+                queryset = queryset.filter(
+                  shopping_cart__user=self.request.user
+                )
 
         return queryset.order_by('-id')
 
