@@ -56,7 +56,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         return False
 
     def get_is_in_shopping_cart(self, instance):
-        if instance.in_shopping_cart.filter(user=self.request.user).exists():
+        if instance.in_shopping_cart.filter(user=self.context['request'].user).exists():
             return True
         return False
 
