@@ -1,3 +1,4 @@
+[![foodgram_workflow](https://github.com/NickLanden/foodgram-project-react/actions/workflows/main.yml/badge.svg)](https://github.com/NickLanden/foodgram-project-react/actions/workflows/main.yml)
 # Foodgram - социальная сеть для любителей готовить
 
 #### Сервис доступен по адресу: 
@@ -18,13 +19,44 @@
 * Python
 * Docker
 
-#### Данные для доступа:
-<p>админ</p>
+### Запуск проекта
+1. Клонируйте проект
+```
+git clone git@github.com:NickLanden/foodgram-project-react.git
+```
+
+2. Подготовте сервер
+```
+scp docker-compose.yml <username>@<host>:/home/<username>/
+scp nginx.conf <username>@<host>:/home/<username>/
+scp .env <username>@<host>:/home/<username>/
+```
+
+3. Установите docker и docker-compose
+```
+sudo apt install docker.io 
+sudo apt install docker-compose
+```
+
+4. Соберите контейнер и выполните миграции
+```
+sudo docker-compose up -d --build
+sudo docker-compose exec backend python manage.py migrate
+```
+
+5. Создайте суперюзера и соберите статику
+```
+sudo docker-compose exec backend python manage.py createsuperuser
+sudo docker-compose exec backend python manage.py collectstatic --no-input
+```
+
+#### Данные для проверки работы приложения:
+<p>Администратор</p>
 
     admin@yandex.ru
     admin_password
     
-<p>тестовый пользователь</p>
+<p>Тестовый пользователь</p>
 
     k.petrov@yandex.ru
-    k.petrov
+    petrov
