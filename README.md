@@ -1,3 +1,4 @@
+[![foodgram_workflow](https://github.com/NickLanden/foodgram-project-react/actions/workflows/main.yml/badge.svg)](https://github.com/NickLanden/foodgram-project-react/actions/workflows/main.yml)
 # Foodgram - социальная сеть для любителей готовить
 
 #### Сервис доступен по адресу: 
