@@ -68,9 +68,9 @@ class CreateIngredientsInRecipeSerializer(serializers.ModelSerializer):
 
     def validate_amount(self, value):
         if value < 1:
-            raise serializers.ValidationError({
-                'amount': 'Количество ингредиента должно быть больше 0!'
-            })
+            raise serializers.ValidationError(
+                'Количество ингредиента должно быть больше 0!'
+            )
         return value
 
     class Meta:
@@ -123,9 +123,9 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
         for i in ingredients:
             if i['id'] in lst:
-                raise serializers.ValidationError({
-                    'ingredient': 'Ингредиенты должны быть уникальными!'
-                })
+                raise serializers.ValidationError(
+                    'Ингредиенты должны быть уникальными!'
+                )
             lst.append(i['id'])
 
         return data
