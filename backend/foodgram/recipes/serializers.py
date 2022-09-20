@@ -2,7 +2,7 @@ import base64
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
-from rest_framework import serializers, validators
+from rest_framework import serializers
 
 from users.serializers import UserSerializer
 from .models import (Favorite,
@@ -78,13 +78,6 @@ class CreateIngredientsInRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = IngredientInRecipe
         fields = ('id', 'amount')
-        validators = [
-            validators.UniqueTogetherValidator(
-                queryset=IngredientInRecipe.objects.all(),
-                fields=['recipe', 'ingredient'],
-                message='Ингредиенты дублируются!'
-            )
-        ]
 
 
 class TagSerializer2(serializers.ModelSerializer):
@@ -186,6 +179,8 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         return serializer.data
 
     def create(self, validated_data):
+        message = 'Ингредиенты дублируются!'
+
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
 
@@ -194,14 +189,20 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
             **validated_data, author=user)
 
         for ingredient in ingredients:
-            ingredient_instance = Ingredient.objects.get(
+            ing_instance = Ingredient.objects.get(
                 pk=ingredient['id'].id)
             amount = ingredient['amount']
-            IngredientInRecipe.objects.create(
-                recipe=recipe,
-                ingredient=ingredient_instance,
-                amount=amount
+            ing_queryset = IngredientInRecipe.objects.filter(
+                recipe=recipe
             )
+            if not ing_queryset.filter(ingredient=ing_instance).exists():
+                IngredientInRecipe.objects.create(
+                    recipe=recipe,
+                    ingredient=ing_instance,
+                    amount=amount
+                )
+            else:
+                raise serializers.ValidationError(message)
 
         recipe.tags.set(tags)
         return recipe
