@@ -107,20 +107,26 @@ def ingredients_update(instance, validated_data):
     ingredients = validated_data.pop('ingredients')
     new_ingredients = []
 
+    ing_queryset = instance.ingredients_in.all()
     for ingredient in ingredients:
-
         try:
             in_recipe = instance.ingredients_in.get(
-                ingredient=ingredient['id'])
-            new_ingredients.append(in_recipe)
+                ingredient=ingredient['id']
+            )
+
+            if in_recipe in new_ingredients:
+                raise serializers.ValidationError(
+                    'Ингредиенты дублируются!'
+                )
             if in_recipe.amount != ingredient['amount']:
                 in_recipe.amount = ingredient['amount']
                 in_recipe.save()
                 continue
             continue
         except ObjectDoesNotExist:
-            ingredient_instance = Ingredient.objects.get(
-                pk=ingredient['id'].id)
+            ingredient_instance = ing_queryset.get(
+                pk=ingredient['id'].id
+            )
             amount = ingredient['amount']
             new_ing_in_recipe = IngredientInRecipe.objects.create(
                 recipe=instance,
@@ -131,10 +137,39 @@ def ingredients_update(instance, validated_data):
             continue
 
     recipe_ingredients = instance.ingredients_in.all()
-    if len(recipe_ingredients) != len(ingredients):
+    if len(recipe_ingredients) > len(ingredients):
         for ing in recipe_ingredients:
             if ing not in new_ingredients:
                 ing.delete()
+
+    # for ingredient in ingredients:
+    #
+    #     try:
+    #         in_recipe = instance.ingredients_in.get(
+    #             ingredient=ingredient['id'])
+    #         new_ingredients.append(in_recipe)
+    #         if in_recipe.amount != ingredient['amount']:
+    #             in_recipe.amount = ingredient['amount']
+    #             in_recipe.save()
+    #             continue
+    #         continue
+    #     except ObjectDoesNotExist:
+    #         ingredient_instance = Ingredient.objects.get(
+    #             pk=ingredient['id'].id)
+    #         amount = ingredient['amount']
+    #         new_ing_in_recipe = IngredientInRecipe.objects.create(
+    #             recipe=instance,
+    #             ingredient=ingredient_instance,
+    #             amount=amount
+    #         )
+    #         new_ingredients.append(new_ing_in_recipe)
+    #         continue
+    #
+    # recipe_ingredients = instance.ingredients_in.all()
+    # if len(recipe_ingredients) > len(ingredients):
+    #     for ing in recipe_ingredients:
+    #         if ing not in new_ingredients:
+    #             ing.delete()
 
 
 def tags_update(instance, validated_data):
