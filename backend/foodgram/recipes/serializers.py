@@ -1,6 +1,5 @@
 import base64
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
@@ -64,15 +63,14 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class CreateIngredientsInRecipeSerializer(serializers.ModelSerializer):
-    id = serializers.PrimaryKeyRelatedField(
-        queryset=Ingredient.objects.all()
-    )
-    amount = serializers.IntegerField(write_only=True)
+    id = serializers.IntegerField()
+    amount = serializers.IntegerField()
 
     def validate_amount(self, value):
-        message = 'Кол-во должно быть больше 1!'
         if value < 1:
-            raise serializers.ValidationError(message)
+            raise serializers.ValidationError({
+                'amount': 'Количество ингредиента должно быть больше 0!'
+            })
         return value
 
     class Meta:
@@ -103,101 +101,6 @@ class Base64ImageField(serializers.ImageField):
         return super().to_internal_value(data)
 
 
-def ingredients_update(instance, validated_data):
-    ingredients = validated_data.pop('ingredients')
-    new_ingredients = []
-
-    ing_queryset = instance.ingredients_in.all()
-    for ingredient in ingredients:
-        try:
-            in_recipe = instance.ingredients_in.get(
-                ingredient=ingredient['id']
-            )
-
-            if in_recipe in new_ingredients:
-                raise serializers.ValidationError(
-                    'Ингредиенты дублируются!'
-                )
-            if in_recipe.amount != ingredient['amount']:
-                in_recipe.amount = ingredient['amount']
-                in_recipe.save()
-                new_ingredients.append(in_recipe)
-                continue
-            continue
-        except ObjectDoesNotExist:
-            ingredient_instance = ing_queryset.get(
-                pk=ingredient['id'].id
-            )
-            amount = ingredient['amount']
-            new_ing_in_recipe = IngredientInRecipe.objects.create(
-                recipe=instance,
-                ingredient=ingredient_instance,
-                amount=amount
-            )
-            new_ingredients.append(new_ing_in_recipe)
-            continue
-
-    recipe_ingredients = instance.ingredients_in.all()
-    if len(recipe_ingredients) > len(ingredients):
-        for ing in recipe_ingredients:
-            if ing not in new_ingredients:
-                ing.delete()
-
-    # for ingredient in ingredients:
-    #
-    #     try:
-    #         in_recipe = instance.ingredients_in.get(
-    #             ingredient=ingredient['id'])
-    #         new_ingredients.append(in_recipe)
-    #         if in_recipe.amount != ingredient['amount']:
-    #             in_recipe.amount = ingredient['amount']
-    #             in_recipe.save()
-    #             continue
-    #         continue
-    #     except ObjectDoesNotExist:
-    #         ingredient_instance = Ingredient.objects.get(
-    #             pk=ingredient['id'].id)
-    #         amount = ingredient['amount']
-    #         new_ing_in_recipe = IngredientInRecipe.objects.create(
-    #             recipe=instance,
-    #             ingredient=ingredient_instance,
-    #             amount=amount
-    #         )
-    #         new_ingredients.append(new_ing_in_recipe)
-    #         continue
-    #
-    # recipe_ingredients = instance.ingredients_in.all()
-    # if len(recipe_ingredients) > len(ingredients):
-    #     for ing in recipe_ingredients:
-    #         if ing not in new_ingredients:
-    #             ing.delete()
-
-
-def tags_update(instance, validated_data):
-    tags = validated_data.pop('tags')
-    new_tags = []
-
-    for tag in tags:
-        try:
-            t = instance.tags_in.get(tag=tag)
-            new_tags.append(t)
-            continue
-        except ObjectDoesNotExist:
-            tag_instance = Tag.objects.get(pk=tag.id)
-            new_tag_in_recipe = TagInRecipe.objects.create(
-                recipe=instance,
-                tag=tag_instance
-            )
-            new_tags.append(new_tag_in_recipe)
-            continue
-
-    recipe_tags = instance.tags_in.all()
-    if len(recipe_tags) != len(tags):
-        for t in recipe_tags:
-            if t not in new_tags:
-                t.delete()
-
-
 class CreateRecipeSerializer(serializers.ModelSerializer):
     ingredients = CreateIngredientsInRecipeSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
@@ -214,46 +117,53 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         serializer = RecipeSerializer(instance)
         return serializer.data
 
+    def validate(self, data):
+        ingredients = self.initial_data.get('ingredients')
+        lst = []
+
+        for i in ingredients:
+            if i['id'] in lst:
+                raise serializers.ValidationError({
+                    'ingredient': 'Ингредиенты должны быть уникальными!'
+                })
+            lst.append(i['id'])
+
+        return data
+
+    def create_ingredients(self, ingredients, recipe):
+        for i in ingredients:
+            ingredient = Ingredient.objects.get(pk=i['id'])
+            IngredientInRecipe.objects.create(
+                ingredient=ingredient, recipe=recipe, amount=i['amount']
+            )
+
+    def create_tags(self, tags, recipe):
+        recipe.tags.set(tags)
+
     def create(self, validated_data):
-        message = 'Ингредиенты дублируются!'
+        ingredients = validated_data.pop('ingredients')
+        tags = validated_data.pop('tags')
+        user = self.context.get('request').user
+        recipe = Recipe.objects.create(**validated_data, author=user)
+        self.create_ingredients(ingredients, recipe)
+        self.create_tags(tags, recipe)
+        return recipe
+
+    def update(self, instance, validated_data):
+        IngredientInRecipe.objects.filter(recipe=instance).delete()
+        TagInRecipe.objects.filter(recipe=instance).delete()
+
+        instance.name = validated_data.get('name', instance.name)
+        instance.text = validated_data.get('text', instance.text)
+        instance.image = validated_data.get('image', instance.image)
+        instance.cooking_time = validated_data.get(
+            'cooking_time', instance.cooking_time)
 
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
 
-        user = self.context.get('request').user
-        recipe = Recipe.objects.create(
-            **validated_data, author=user)
-
-        for ingredient in ingredients:
-            ing_instance = Ingredient.objects.get(
-                pk=ingredient['id'].id)
-            amount = ingredient['amount']
-            ing_queryset = IngredientInRecipe.objects.filter(
-                recipe=recipe
-            )
-            if not ing_queryset.filter(ingredient=ing_instance).exists():
-                IngredientInRecipe.objects.create(
-                    recipe=recipe,
-                    ingredient=ing_instance,
-                    amount=amount
-                )
-            else:
-                raise serializers.ValidationError(message)
-
-        recipe.tags.set(tags)
-        return recipe
-
-    def update(self, instance, validated_data):
-        instance.image = validated_data.get('image', instance.image)
-        instance.name = validated_data.get('name', instance.name)
-        instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get(
-            'cooking_time',
-            instance.cooking_time
-        )
-
-        ingredients_update(instance, validated_data)
-        tags_update(instance, validated_data)
+        self.create_ingredients(ingredients, instance)
+        self.create_tags(tags, instance)
 
         instance.save()
         return instance
