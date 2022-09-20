@@ -50,13 +50,13 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'image', 'text', 'cooking_time')
 
     def get_is_favorited(self, instance):
-        user = self.context['request'].user
+        user = self.context.get('request').user
         if instance.in_favorites.filter(user=user).exists():
             return True
         return False
 
     def get_is_in_shopping_cart(self, instance):
-        user = self.context['request'].user
+        user = self.context.get('request').user
         if instance.in_shopping_cart.filter(user=user).exists():
             return True
         return False
