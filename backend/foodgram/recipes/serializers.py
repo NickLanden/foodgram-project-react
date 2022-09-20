@@ -81,7 +81,7 @@ class CreateIngredientsInRecipeSerializer(serializers.ModelSerializer):
         validators = [
             validators.UniqueTogetherValidator(
                 queryset=IngredientInRecipe.objects.all(),
-                fields=['recipe_id', 'ingredient_id'],
+                fields=['recipe', 'ingredient'],
                 message='Ингредиенты дублируются!'
             )
         ]
