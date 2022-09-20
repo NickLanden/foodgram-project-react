@@ -121,6 +121,7 @@ def ingredients_update(instance, validated_data):
             if in_recipe.amount != ingredient['amount']:
                 in_recipe.amount = ingredient['amount']
                 in_recipe.save()
+                new_ingredients.append(in_recipe)
                 continue
             continue
         except ObjectDoesNotExist:
