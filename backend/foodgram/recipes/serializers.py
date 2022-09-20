@@ -51,7 +51,9 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'image', 'text', 'cooking_time')
 
     def get_is_favorited(self, instance):
-        if Favorite.objects.filter(recipe=instance.id).exists():
+        user = self.context['request'].user
+        if instance.in_favorites.filter(user=user).exists():
+        # if Favorite.objects.filter(recipe=instance.id).exists():
             return True
         return False
 

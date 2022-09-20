@@ -22,7 +22,7 @@ class RecipeFilter(filters.FilterSet):
     )
     is_in_shopping_cart = filters.BooleanFilter(
         method='get_is_in_shopping_cart',
-        # widget=BooleanWidget()
+        widget=BooleanWidget()
     )
 
     class Meta:
