@@ -2,7 +2,7 @@ import base64
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
-from rest_framework import serializers
+from rest_framework import serializers, validators
 
 from users.serializers import UserSerializer
 from .models import (Favorite,
@@ -70,7 +70,7 @@ class CreateIngredientsInRecipeSerializer(serializers.ModelSerializer):
     amount = serializers.IntegerField(write_only=True)
 
     def validate_amount(self, value):
-        message = 'Кол-во ингредиентов должно быть больше 1!'
+        message = 'Кол-во должно быть больше 1!'
         if value < 1:
             raise serializers.ValidationError(message)
         return value
@@ -78,6 +78,13 @@ class CreateIngredientsInRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = IngredientInRecipe
         fields = ('id', 'amount')
+        validators = [
+            validators.UniqueTogetherValidator(
+                queryset=IngredientInRecipe.objects.all(),
+                fields=['recipe', 'ingredient'],
+                message='Ингредиенты дублируются!'
+            )
+        ]
 
 
 class TagSerializer2(serializers.ModelSerializer):

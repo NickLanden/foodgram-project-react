@@ -132,9 +132,7 @@ class IngredientInRecipe(models.Model):
         on_delete=models.CASCADE,
         related_name='in_recipe'
     )
-    amount = models.IntegerField(
-        validators=[validate_integer_greater_zero]
-    )
+    amount = models.IntegerField()
 
     def __str__(self):
         return f'{self.recipe}, {self.ingredient}'
@@ -146,10 +144,6 @@ class IngredientInRecipe(models.Model):
             models.UniqueConstraint(
                 fields=('recipe_id', 'ingredient_id'),
                 name='unique_recipes_ingredients',
-            ),
-            validators.MinValueValidator(
-                limit_value=1,
-                message='Кол-во должно быть больше 0!'
             ),
         )
 
