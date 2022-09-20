@@ -1,4 +1,5 @@
 from colorfield.fields import ColorField
+from django.core import validators
 from django.db import models
 
 from users.models import User
@@ -145,6 +146,10 @@ class IngredientInRecipe(models.Model):
             models.UniqueConstraint(
                 fields=('recipe_id', 'ingredient_id'),
                 name='unique_recipes_ingredients',
+            ),
+            validators.MinValueValidator(
+                limit_value=1,
+                message='Кол-во должно быть больше 0!'
             ),
         )
 
