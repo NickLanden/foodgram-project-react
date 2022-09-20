@@ -53,7 +53,6 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, instance):
         user = self.context['request'].user
         if instance.in_favorites.filter(user=user).exists():
-        # if Favorite.objects.filter(recipe=instance.id).exists():
             return True
         return False
 
