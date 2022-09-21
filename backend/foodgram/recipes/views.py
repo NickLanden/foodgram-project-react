@@ -58,6 +58,7 @@ class RecipeViewSet(ModelViewSet):
     filterset_class = RecipeFilter
 
     def get_permissions(self):
+        print(self.action)
         if self.action in ('list', 'retrieve'):
             self.permission_classes = (AllowAny,)
         elif self.action in (
@@ -76,6 +77,11 @@ class RecipeViewSet(ModelViewSet):
             return FavoriteSerializer
         elif self.action == 'partial_update':
             return CreateRecipeSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({'request': self.request})
+        return context
 
     @action(methods=['post', 'delete'], detail=True)
     def favorite(self, request, id=None):

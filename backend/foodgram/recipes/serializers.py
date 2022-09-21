@@ -50,16 +50,23 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'image', 'text', 'cooking_time')
 
     def get_is_favorited(self, instance):
-        user = self.context.get('request').user
-        if instance.in_favorites.filter(user=user).exists():
-            return True
-        return False
+        try:
+            print(self.context)
+            user = self.context.get('request').user
+            if instance.in_favorites.filter(user=user).exists():
+                return True
+            return False
+        except TypeError:
+            return False
 
     def get_is_in_shopping_cart(self, instance):
-        user = self.context.get('request').user
-        if instance.in_shopping_cart.filter(user=user).exists():
-            return True
-        return False
+        try:
+            user = self.context.get('request').user
+            if instance.in_shopping_cart.filter(user=user).exists():
+                return True
+            return False
+        except TypeError:
+            return False
 
 
 class CreateIngredientsInRecipeSerializer(serializers.ModelSerializer):
@@ -114,7 +121,12 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                   'image', 'text', 'cooking_time')
 
     def to_representation(self, instance):
-        serializer = RecipeSerializer(instance)
+        serializer = RecipeSerializer(
+            instance,
+            context={
+                'request': self.context.get('request')
+            }
+        )
         return serializer.data
 
     def validate(self, data):
@@ -143,6 +155,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
+
         user = self.context.get('request').user
         recipe = Recipe.objects.create(**validated_data, author=user)
         self.create_ingredients(ingredients, recipe)
@@ -166,6 +179,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         self.create_tags(tags, instance)
 
         instance.save()
+
         return instance
 
 

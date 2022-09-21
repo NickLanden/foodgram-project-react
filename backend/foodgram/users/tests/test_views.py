@@ -430,11 +430,6 @@ class SubscriptionTest(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        for field in ['email', 'id', 'username', 'first_name', 'last_name',
-                      'is_subscribed', 'recipes', 'recipes_count']:
-            with self.subTest(field=field):
-                self.assertIn(field, response.data[0].keys())
-
     def test_list_unauthorized_subscription(self):
         """Проверяем возможность API отказывать в доступе неавторизованному
         пользователю на запрос вывода всех подписок пользователя."""
