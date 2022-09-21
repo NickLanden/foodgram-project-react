@@ -399,7 +399,7 @@ class CreateRecipeTest(APITestCase):
             data=json.dumps(self.doshirak_payload),
             content_type='application/json'
         )
-        print(response.data)
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(Recipe.objects.all()), 2)
 

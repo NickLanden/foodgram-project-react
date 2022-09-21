@@ -50,23 +50,20 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'image', 'text', 'cooking_time')
 
     def get_is_favorited(self, instance):
-        try:
-            print(self.context)
-            user = self.context.get('request').user
-            if instance.in_favorites.filter(user=user).exists():
-                return True
+        request = self.context.get('request')
+        if request is None or request.user.is_anonymous:
             return False
-        except TypeError:
-            return False
+        return instance.in_favorites.filter(
+            user=request.user
+        ).exists()
 
     def get_is_in_shopping_cart(self, instance):
-        try:
-            user = self.context.get('request').user
-            if instance.in_shopping_cart.filter(user=user).exists():
-                return True
+        request = self.context.get('request')
+        if request is None or request.user.is_anonymous:
             return False
-        except TypeError:
-            return False
+        return instance.in_shopping_cart.filter(
+            user=request.user
+        ).exists()
 
 
 class CreateIngredientsInRecipeSerializer(serializers.ModelSerializer):

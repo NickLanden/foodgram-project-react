@@ -58,7 +58,6 @@ class RecipeViewSet(ModelViewSet):
     filterset_class = RecipeFilter
 
     def get_permissions(self):
-        print(self.action)
         if self.action in ('list', 'retrieve'):
             self.permission_classes = (AllowAny,)
         elif self.action in (
